@@ -1,11 +1,12 @@
 #include "sip_message.h"
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CRLF "\r\n"
-#define CALL_ID_HEADER_NAME "Call-ID"
 
-static const char *get_header_value(const char *buffer, const char *header_name, size_t *length)
+const char *get_header_value(const char *buffer, const char *header_name, size_t *length)
 {
     size_t header_name_len = strlen(header_name);
     const char *line_start = buffer;
@@ -47,4 +48,250 @@ const char *get_message_call_id(sip_message_t *message, size_t *length)
         message->call_id_length = *length;
     }
     return call_id;
+}
+
+const char *get_message_from(sip_message_t *message, size_t *length)
+{
+    if (message->from_length > 0 && message->from != NULL)
+    {
+        *length = message->from_length;
+        return message->from;
+    }
+
+    const char *from = get_header_value(message->buffer, FROM_HEADER_NAME, length);
+    if (from != NULL)
+    {
+        message->from = from;
+        message->from_length = *length;
+    }
+    return from;
+}
+
+const char *get_message_to(sip_message_t *message, size_t *length)
+{
+    if (message->to_length > 0 && message->to != NULL)
+    {
+        *length = message->to_length;
+        return message->to;
+    }
+
+    const char *to = get_header_value(message->buffer, TO_HEADER_NAME, length);
+    if (to != NULL)
+    {
+        message->to = to;
+        message->to_length = *length;
+    }
+    return to;
+}
+
+const char *get_message_via(sip_message_t *message, size_t *length)
+{
+    if (message->via_length > 0 && message->via != NULL)
+    {
+        *length = message->via_length;
+        return message->via;
+    }
+
+    const char *via = get_header_value(message->buffer, VIA_HEADER_NAME, length);
+    if (via != NULL)
+    {
+        message->via = via;
+        message->via_length = *length;
+    }
+    return via;
+}
+
+const char *get_message_cseq(sip_message_t *message, size_t *length)
+{
+    if (message->cseq_length > 0 && message->cseq != NULL)
+    {
+        *length = message->cseq_length;
+        return message->cseq;
+    }
+
+    const char *cseq = get_header_value(message->buffer, CSEQ_HEADER_NAME, length);
+    if (cseq != NULL)
+    {
+        message->cseq = cseq;
+        message->cseq_length = *length;
+    }
+    return cseq;
+}
+
+sip_msg_error_t parse_first_line(sip_message_t *message)
+{
+    const char *line_end = strstr(message->buffer, CRLF);
+    if (line_end == NULL)
+    {
+        printf("First line is malformed\n");
+        return ERROR_MALFORMED_MESSAGE;
+    }
+    const char *line_start = message->buffer;
+
+    if (strncmp(line_start, "SIP", 3) == 0)
+    {
+        message->is_request = false;
+
+        const char *dash_pos = strchr(line_start, '/');
+        if (dash_pos == NULL || dash_pos + 2 >= line_end)
+        {
+            printf("SIP version is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->version_major = atoi(dash_pos + 1);
+        message->version_minor = atoi(dash_pos + 3);
+
+        // TODO version check
+
+        const char *status_code_start = dash_pos + 4;
+        while (status_code_start < line_end && *status_code_start == ' ')
+        {
+            status_code_start++;
+        }
+        if (status_code_start >= line_end)
+        {
+            printf("Status code is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->status_code = atoi(status_code_start);
+
+        // TODO status code check
+
+        const char *reason_start = status_code_start;
+        while (reason_start < line_end && *reason_start != ' ')
+        {
+            reason_start++;
+        }
+        if (reason_start >= line_end)
+        {
+            printf("Reason is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->reason = reason_start + 1;
+        message->reason_length = line_end - message->reason;
+
+        // TODO reason check
+
+        return ERROR_NONE;
+    }
+    else
+    {
+        message->is_request = true;
+
+        const char *method = line_start;
+        const char *space_pos = strchr(method, ' ');
+        if (space_pos == NULL || space_pos >= line_end)
+        {
+            printf("Request line is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->method = method;
+        message->method_length = space_pos - method;
+
+        // TODO method check
+
+        const char *sip_pos = space_pos + 1;
+        while (sip_pos < line_end && *sip_pos == ' ')
+        {
+            sip_pos++;
+        }
+        if (sip_pos >= line_end)
+        {
+            printf("URI is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        const char *uri_end = strchr(sip_pos, ' ');
+        if (uri_end == NULL || uri_end >= line_end)
+        {
+            printf("URI is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->uri = sip_pos;
+        message->uri_length = uri_end - sip_pos;
+
+        // TODO URI check
+
+        const char *dash_pos = strchr(uri_end, '/');
+        if (dash_pos == NULL || dash_pos + 2 >= line_end)
+        {
+            printf("SIP version is malformed\n");
+            return ERROR_MALFORMED_MESSAGE;
+        }
+        message->version_major = atoi(dash_pos + 1);
+        message->version_minor = atoi(dash_pos + 3);
+
+        // TODO version check
+
+        return ERROR_NONE;
+    }
+}
+
+sip_msg_error_t parse_message(sip_message_t *message)
+{
+    const char *header;
+    size_t length;
+
+    // Parse first line
+    sip_msg_error_t err = parse_first_line(message);
+    if (err != ERROR_NONE)
+    {
+        return err;
+    }
+
+    // Check mandatory headers
+    // Call-ID header checked before calling this function
+
+    // Check for From header
+    header = get_message_from(message, &length);
+    if (header == NULL || length == 0)
+    {
+        return false;
+    }
+
+    // Check for To header
+    header = get_message_to(message, &length);
+    if (header == NULL || length == 0)
+    {
+        return false;
+    }
+
+    // Check for Via header
+    header = get_message_via(message, &length);
+    if (header == NULL || length == 0)
+    {
+        return false;
+    }
+
+    // Check for CSeq header
+    header = get_message_cseq(message, &length);
+    if (header == NULL || length == 0)
+    {
+        return false;
+    }
+
+    if (message->is_request)
+    {
+        // Check for Max-Forwards header
+        header = get_header_value(message->buffer, MAX_FORWARD_HEADER_NAME, &length);
+        if (header == NULL || length == 0)
+        {
+            return false;
+        }
+    }
+
+    // Check for Content-Length header
+    header = get_header_value(message->buffer, CONTENT_LENGTH_HEADER_NAME, &length);
+    if (header == NULL || length == 0)
+    {
+        return false;
+    }
+
+    // TODO additional validations
+
+    return true;
+}
+
+bool is_request(sip_message_t *message)
+{
+    return message->is_request;
 }

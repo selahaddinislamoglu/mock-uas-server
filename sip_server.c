@@ -13,8 +13,9 @@
  * @param queue Pointer to the message queue to initialize.
  * @param capacity The maximum number of messages the queue can hold.
  */
-void initialize_message_queue(message_queue_t *queue, int capacity) {
-    queue->messages = malloc(sizeof(sip_message_t*) * capacity);
+void initialize_message_queue(message_queue_t *queue, int capacity)
+{
+    queue->messages = malloc(sizeof(sip_message_t *) * capacity);
     queue->capacity = capacity;
     queue->size = 0;
     queue->front = 0;
@@ -27,8 +28,10 @@ void initialize_message_queue(message_queue_t *queue, int capacity) {
  * @brief Destroys a message queue, freeing its resources.
  * @param queue Pointer to the message queue to destroy.
  */
-void destroy_message_queue(message_queue_t *queue) {
-    for (int i = 0; i < queue->size; i++) {
+void destroy_message_queue(message_queue_t *queue)
+{
+    for (int i = 0; i < queue->size; i++)
+    {
         free(queue->messages[(queue->front + i) % queue->capacity]);
     }
     free(queue->messages);
@@ -42,9 +45,11 @@ void destroy_message_queue(message_queue_t *queue) {
  * @param message Pointer to the message to enqueue.
  * @return 1 on success, 0 if the queue is full.
  */
-int enqueue_message(message_queue_t *queue, sip_message_t *message) {
+int enqueue_message(message_queue_t *queue, sip_message_t *message)
+{
     pthread_mutex_lock(&queue->mutex);
-    if (queue->size == queue->capacity) {
+    if (queue->size == queue->capacity)
+    {
         pthread_mutex_unlock(&queue->mutex);
         return 0;
     }
@@ -64,10 +69,12 @@ int enqueue_message(message_queue_t *queue, sip_message_t *message) {
  * @param message Double pointer to store the dequeued message.
  * @return 1 on success, 0 if the queue is empty.
  */
-int dequeue_message(message_queue_t *queue, sip_message_t **message) {
+int dequeue_message(message_queue_t *queue, sip_message_t **message)
+{
     pthread_mutex_lock(&queue->mutex);
 
-    while (queue->size == 0) {
+    while (queue->size == 0)
+    {
         pthread_cond_wait(&queue->cond, &queue->mutex);
     }
 
@@ -79,23 +86,41 @@ int dequeue_message(message_queue_t *queue, sip_message_t **message) {
     return 1;
 }
 
+void send_sip_error_response(const sip_message_t *request, int status_code, const char *reason)
+{
+    // Placeholder implementation for sending SIP error responses
+    printf("Sending SIP error response: %d %s\n", status_code, reason);
+}
+
 /**
  * @brief Worker thread function to process SIP messages.
  * @param arg Pointer to the worker thread's message queue.
  * @return NULL
  */
-void* process_sip_messages(void* arg) {
+void *process_sip_messages(void *arg)
+{
     message_queue_t *queue = (message_queue_t *)arg;
     sip_message_t *message;
 
-    while (1) {
-        if (dequeue_message(queue, &message)) {
+    while (1)
+    {
+        if (dequeue_message(queue, &message))
+        {
             // Process the SIP message here
             printf("Processing SIP message: %s\n", message->buffer);
 
-            // TODO: Simulate processing and response
-            // Here is where you'd implement message processing and response sending logic
+            sip_msg_error_t err = parse_message(message);
+            if (err != ERROR_NONE)
+            {
+                printf("Failed to parse SIP message first line\n");
+                if (is_request(message))
+                {
+                    send_sip_error_response(message, 400, "Bad Request");
+                }
+                goto cleanup;
+            }
 
+        cleanup:
             free(message);
         }
     }
