@@ -38,8 +38,9 @@ int main()
     for (int i = 0; i < MAX_THREADS; i++)
     {
         worker_threads[i].calls = NULL;
+        worker_threads[i].server_socket = server_socket;
         initialize_message_queue(&worker_threads[i].queue, QUEUE_CAPACITY);
-        if (pthread_create(&worker_threads[i].thread, NULL, process_sip_messages, &worker_threads[i].queue) != 0)
+        if (pthread_create(&worker_threads[i].thread, NULL, process_sip_messages, &worker_threads[i]) != 0)
         {
             perror("Failed to create worker thread");
             close(server_socket);
@@ -121,13 +122,12 @@ void handle_new_message(int server_socket)
         memset(message, 0, sizeof(sip_message_t));
 
         message->client_addr_len = sizeof(message->client_addr);
-        ssize_t bytes_received = recvfrom(server_socket, message->buffer, BUFFER_SIZE, 0,
+        ssize_t bytes_received = recvfrom(server_socket, message->buffer, sizeof(message->buffer) - 1, 0,
                                           (struct sockaddr *)&message->client_addr, &message->client_addr_len);
 
         if (bytes_received > 0)
         {
-            message->buffer[bytes_received] = '\0';
-
+            message->buffer_length = (size_t)bytes_received;
             const char *call_id;
             size_t call_id_length;
             call_id = get_message_call_id(message, &call_id_length);

@@ -11,19 +11,22 @@
 
 #define BUFFER_SIZE 1024
 
+#define SIP_PROTOCOL_AND_VERSION "SIP/2.0"
+
 // SIP headers
-#define CALL_ID_HEADER_NAME "Call-ID"
-#define FROM_HEADER_NAME "From"
-#define TO_HEADER_NAME "To"
-#define VIA_HEADER_NAME "Via"
-#define CSEQ_HEADER_NAME "CSeq"
-#define MAX_FORWARD_HEADER_NAME "Max-Forwards"
-#define CONTENT_LENGTH_HEADER_NAME "Content-Length"
+#define HEADER_NAME_CALL_ID "Call-ID"
+#define HEADER_NAME_FROM "From"
+#define HEADER_NAME_TO "To"
+#define HEADER_NAME_VIA "Via"
+#define HEADER_NAME_CSEQ "CSeq"
+#define HEADER_NAME_MAX_FORWARDS "Max-Forwards"
+#define HEADER_NAME_CONTENT_LENGTH "Content-Length"
 
 typedef enum
 {
     ERROR_NONE = 0,
-    ERROR_MALFORMED_MESSAGE
+    ERROR_MALFORMED_MESSAGE,
+    ERROR_MISSING_MANDATORY_HEADER
 } sip_msg_error_t;
 
 #define METHOD_NAME_INVITE "INVITE"
@@ -91,13 +94,30 @@ typedef enum
     RESPONSE_GLOBAL_FAILURE_END = 699
 } sip_response_range_t;
 
+#define RESPONSE_CODE_100 "100"
+#define RESPONSE_CODE_180 "180"
+#define RESPONSE_CODE_200 "200"
+#define RESPONSE_CODE_300 "300"
+#define RESPONSE_CODE_400 "400"
+#define RESPONSE_CODE_500 "500"
+#define RESPONSE_CODE_600 "600"
+
+#define RESPONSE_TEXT_TRYING "Trying"
+#define RESPONSE_TEXT_RINGING "Ringing"
+#define RESPONSE_TEXT_OK "OK"
+
 /**
  * @struct sip_message_t
  * @brief Structure to hold SIP message data and client address information.
  */
 typedef struct
 {
-    char buffer[BUFFER_SIZE + 1];
+    char buffer[BUFFER_SIZE];
+    size_t buffer_length;
+
+    char response[BUFFER_SIZE]; // TODO make it dynamic
+    size_t response_length;
+
     struct sockaddr_in client_addr;
     socklen_t client_addr_len;
 
@@ -107,11 +127,21 @@ typedef struct
     const char *from;
     size_t from_length;
 
+    const char *from_tag;
+    size_t from_tag_length;
+
     const char *to;
     size_t to_length;
 
+    const char *to_tag;
+    size_t to_tag_length;
+
+    // TODO multiple Via headers support
     const char *via;
     size_t via_length;
+
+    const char *branch;
+    size_t branch_length;
 
     const char *cseq;
     size_t cseq_length;
@@ -132,12 +162,18 @@ typedef struct
 
 } sip_message_t;
 
+void cleanup_sip_message(sip_message_t *message);
+
 const char *get_header_value(const char *buffer, const char *header_name, size_t *length);
 const char *get_message_call_id(sip_message_t *message, size_t *length);
 const char *get_message_from(sip_message_t *message, size_t *length);
 const char *get_message_to(sip_message_t *message, size_t *length);
 const char *get_message_via(sip_message_t *message, size_t *length);
 const char *get_message_cseq(sip_message_t *message, size_t *length);
+
+const char *get_from_tag(sip_message_t *message, size_t *length);
+const char *get_to_tag(sip_message_t *message, size_t *length);
+const char *get_branch_param(sip_message_t *message, size_t *length);
 
 sip_msg_error_t parse_message(sip_message_t *message);
 sip_method_t get_message_method(sip_message_t *message);

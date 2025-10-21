@@ -6,6 +6,14 @@
 
 #define CRLF "\r\n"
 
+void cleanup_sip_message(sip_message_t *message)
+{
+    if (message != NULL)
+    {
+        free(message);
+    }
+}
+
 const char *get_header_value(const char *buffer, const char *header_name, size_t *length)
 {
     size_t header_name_len = strlen(header_name);
@@ -41,7 +49,7 @@ const char *get_message_call_id(sip_message_t *message, size_t *length)
         return message->call_id;
     }
 
-    const char *call_id = get_header_value(message->buffer, CALL_ID_HEADER_NAME, length);
+    const char *call_id = get_header_value(message->buffer, HEADER_NAME_CALL_ID, length);
     if (call_id != NULL)
     {
         message->call_id = call_id;
@@ -58,7 +66,7 @@ const char *get_message_from(sip_message_t *message, size_t *length)
         return message->from;
     }
 
-    const char *from = get_header_value(message->buffer, FROM_HEADER_NAME, length);
+    const char *from = get_header_value(message->buffer, HEADER_NAME_FROM, length);
     if (from != NULL)
     {
         message->from = from;
@@ -75,7 +83,7 @@ const char *get_message_to(sip_message_t *message, size_t *length)
         return message->to;
     }
 
-    const char *to = get_header_value(message->buffer, TO_HEADER_NAME, length);
+    const char *to = get_header_value(message->buffer, HEADER_NAME_TO, length);
     if (to != NULL)
     {
         message->to = to;
@@ -92,7 +100,7 @@ const char *get_message_via(sip_message_t *message, size_t *length)
         return message->via;
     }
 
-    const char *via = get_header_value(message->buffer, VIA_HEADER_NAME, length);
+    const char *via = get_header_value(message->buffer, HEADER_NAME_VIA, length);
     if (via != NULL)
     {
         message->via = via;
@@ -109,7 +117,7 @@ const char *get_message_cseq(sip_message_t *message, size_t *length)
         return message->cseq;
     }
 
-    const char *cseq = get_header_value(message->buffer, CSEQ_HEADER_NAME, length);
+    const char *cseq = get_header_value(message->buffer, HEADER_NAME_CSEQ, length);
     if (cseq != NULL)
     {
         message->cseq = cseq;
@@ -226,6 +234,87 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
     }
 }
 
+const char *get_from_tag(sip_message_t *message, size_t *length)
+{
+    if (message->from == NULL || message->from_length == 0)
+    {
+        return NULL;
+    }
+    const char *tag_start = strchr(message->from, ';');
+    if (tag_start == NULL)
+    {
+        return NULL;
+    }
+    tag_start++;
+    while (*tag_start == ' ' || *tag_start == '\t')
+    {
+        tag_start++;
+    }
+    const char *tag_end = strchr(tag_start, ';');
+    if (tag_end == NULL)
+    {
+        tag_end = message->from + message->from_length;
+    }
+    message->from_tag = tag_start;
+    message->from_tag_length = tag_end - tag_start;
+    *length = message->from_tag_length;
+    return tag_start;
+}
+
+const char *get_to_tag(sip_message_t *message, size_t *length)
+{
+    if (message->to == NULL || message->to_length == 0)
+    {
+        return NULL;
+    }
+    const char *tag_start = strchr(message->to, ';');
+    if (tag_start == NULL)
+    {
+        return NULL;
+    }
+    tag_start++;
+    while (*tag_start == ' ' || *tag_start == '\t')
+    {
+        tag_start++;
+    }
+    const char *tag_end = strchr(tag_start, ';');
+    if (tag_end == NULL)
+    {
+        tag_end = message->to + message->to_length;
+    }
+    message->to_tag = tag_start;
+    message->to_tag_length = tag_end - tag_start;
+    *length = message->to_tag_length;
+    return tag_start;
+}
+
+const char *get_branch_param(sip_message_t *message, size_t *length)
+{
+    if (message->via == NULL || message->via_length == 0)
+    {
+        return NULL;
+    }
+    const char *branch_start = strchr(message->via, ';');
+    if (branch_start == NULL)
+    {
+        return NULL;
+    }
+    branch_start++;
+    while (*branch_start == ' ' || *branch_start == '\t')
+    {
+        branch_start++;
+    }
+    const char *branch_end = strchr(branch_start, ';');
+    if (branch_end == NULL)
+    {
+        branch_end = message->via + message->via_length;
+    }
+    message->branch = branch_start;
+    message->branch_length = branch_end - branch_start;
+    *length = message->branch_length;
+    return branch_start;
+}
+
 sip_msg_error_t parse_message(sip_message_t *message)
 {
     const char *header;
@@ -235,6 +324,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     sip_msg_error_t err = parse_first_line(message);
     if (err != ERROR_NONE)
     {
+        printf("Failed to parse first line\n");
         return err;
     }
 
@@ -245,50 +335,56 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_message_from(message, &length);
     if (header == NULL || length == 0)
     {
-        return false;
+        printf("From header is missing\n");
+        return ERROR_MISSING_MANDATORY_HEADER;
     }
 
     // Check for To header
     header = get_message_to(message, &length);
     if (header == NULL || length == 0)
     {
-        return false;
+        printf("To header is missing\n");
+        return ERROR_MISSING_MANDATORY_HEADER;
     }
 
     // Check for Via header
     header = get_message_via(message, &length);
     if (header == NULL || length == 0)
     {
-        return false;
+        printf("Via header is missing\n");
+        return ERROR_MISSING_MANDATORY_HEADER;
     }
 
     // Check for CSeq header
     header = get_message_cseq(message, &length);
     if (header == NULL || length == 0)
     {
-        return false;
+        printf("CSeq header is missing\n");
+        return ERROR_MISSING_MANDATORY_HEADER;
     }
 
     if (message->is_request)
     {
         // Check for Max-Forwards header
-        header = get_header_value(message->buffer, MAX_FORWARD_HEADER_NAME, &length);
+        header = get_header_value(message->buffer, HEADER_NAME_MAX_FORWARDS, &length);
         if (header == NULL || length == 0)
         {
-            return false;
+            printf("Max-Forwards header is missing\n");
+            return ERROR_MISSING_MANDATORY_HEADER;
         }
     }
 
     // Check for Content-Length header
-    header = get_header_value(message->buffer, CONTENT_LENGTH_HEADER_NAME, &length);
+    header = get_header_value(message->buffer, HEADER_NAME_CONTENT_LENGTH, &length);
     if (header == NULL || length == 0)
     {
-        return false;
+        printf("Content-Length header is missing\n");
+        return ERROR_MISSING_MANDATORY_HEADER;
     }
 
     // TODO additional validations
 
-    return true;
+    return ERROR_NONE;
 }
 
 sip_method_t get_message_method(sip_message_t *message)

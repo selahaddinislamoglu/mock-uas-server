@@ -89,16 +89,16 @@ void delete_all_calls(sip_call_t **calls)
     *calls = NULL;
 }
 
-sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *local_tag, size_t local_tag_length, const char *remote_tag, size_t remote_tag_length)
+sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
     sip_dialog_t *current = dialogs;
     while (current != NULL)
     {
-        if (current->local_tag_length == local_tag_length &&
-            strncmp(current->local_tag, local_tag, local_tag_length) == 0)
+        if (current->from_tag_length == from_tag_length &&
+            strncmp(current->from_tag, from_tag, from_tag_length) == 0)
         {
-            if ((current->remote_tag == NULL && remote_tag == NULL) || (current->remote_tag_length == remote_tag_length &&
-                                                                        strncmp(current->remote_tag, remote_tag, remote_tag_length) == 0))
+            if ((current->to_tag == NULL && to_tag == NULL) || (current->to_tag_length == to_tag_length &&
+                                                                strncmp(current->to_tag, to_tag, to_tag_length) == 0))
             {
                 return current;
             }
@@ -108,24 +108,24 @@ sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *local_tag, si
     return NULL;
 }
 
-sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *local_tag, size_t local_tag_length)
+sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length)
 {
     sip_dialog_t *new_dialog = (sip_dialog_t *)malloc(sizeof(sip_dialog_t));
     if (new_dialog == NULL)
     {
         return NULL;
     }
-    new_dialog->local_tag = (char *)malloc(local_tag_length + 1);
-    if (new_dialog->local_tag == NULL)
+    new_dialog->from_tag = (char *)malloc(from_tag_length + 1);
+    if (new_dialog->from_tag == NULL)
     {
         free(new_dialog);
         return NULL;
     }
-    strncpy(new_dialog->local_tag, local_tag, local_tag_length);
-    new_dialog->local_tag[local_tag_length] = '\0';
-    new_dialog->local_tag_length = local_tag_length;
-    new_dialog->remote_tag = NULL;
-    new_dialog->remote_tag_length = 0;
+    strncpy(new_dialog->from_tag, from_tag, from_tag_length);
+    new_dialog->from_tag[from_tag_length] = '\0';
+    new_dialog->from_tag_length = from_tag_length;
+    new_dialog->to_tag = NULL;
+    new_dialog->to_tag_length = 0;
     new_dialog->transaction = NULL;
     new_dialog->next = *dialogs;
     *dialogs = new_dialog;
@@ -138,26 +138,26 @@ void cleanup_dialog(sip_dialog_t *dialog)
     {
         delete_all_transactions(&dialog->transaction);
     }
-    free(dialog->local_tag);
-    if (dialog->remote_tag != NULL)
+    free(dialog->from_tag);
+    if (dialog->to_tag != NULL)
     {
-        free(dialog->remote_tag);
+        free(dialog->to_tag);
     }
     free(dialog);
 }
 
-void delete_dialog(sip_dialog_t *dialogs, const char *local_tag, size_t local_tag_length, const char *remote_tag, size_t remote_tag_length)
+void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
     sip_dialog_t *current = dialogs;
     sip_dialog_t *previous = NULL;
 
     while (current != NULL)
     {
-        if (current->local_tag_length == local_tag_length &&
-            strncmp(current->local_tag, local_tag, local_tag_length) == 0)
+        if (current->from_tag_length == from_tag_length &&
+            strncmp(current->from_tag, from_tag, from_tag_length) == 0)
         {
-            if ((current->remote_tag == NULL && remote_tag == NULL) || (current->remote_tag_length == remote_tag_length &&
-                                                                        strncmp(current->remote_tag, remote_tag, remote_tag_length) == 0))
+            if ((current->to_tag == NULL && to_tag == NULL) || (current->to_tag_length == to_tag_length &&
+                                                                strncmp(current->to_tag, to_tag, to_tag_length) == 0))
             {
                 if (previous == NULL)
                 {
@@ -227,6 +227,7 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
 
 void cleanup_transaction(sip_transaction_t *transaction)
 {
+    cleanup_sip_message(transaction->last_message);
     free(transaction->branch);
     free(transaction);
 }

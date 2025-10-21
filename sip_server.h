@@ -19,6 +19,7 @@ typedef struct
     message_queue_t queue;
     pthread_t thread;
     sip_call_t *calls; // TODO hash map for calls
+    int server_socket; // TODO maybe need to implement dedicated sender thread
 } worker_thread_t;
 
 void *process_sip_messages(void *arg);
