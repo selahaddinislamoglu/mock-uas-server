@@ -291,7 +291,78 @@ sip_msg_error_t parse_message(sip_message_t *message)
     return true;
 }
 
-bool is_request(sip_message_t *message)
+sip_method_t get_message_method(sip_message_t *message)
 {
-    return message->is_request;
+    if (!message->is_request)
+    {
+        return UNKNOWN;
+    }
+
+    if (message->method_type != UNKNOWN)
+    {
+        return message->method_type;
+    }
+
+    if (message->method_length == METHOD_SIZE_INVITE && strncasecmp(message->method, METHOD_NAME_INVITE, METHOD_SIZE_INVITE) == 0)
+    {
+        message->method_type = INVITE;
+    }
+    else if (message->method_length == METHOD_SIZE_ACK && strncasecmp(message->method, METHOD_NAME_ACK, METHOD_SIZE_ACK) == 0)
+    {
+        message->method_type = ACK;
+    }
+    else if (message->method_length == METHOD_SIZE_BYE && strncasecmp(message->method, METHOD_NAME_BYE, METHOD_SIZE_BYE) == 0)
+    {
+        message->method_type = BYE;
+    }
+    else if (message->method_length == METHOD_SIZE_CANCEL && strncasecmp(message->method, METHOD_NAME_CANCEL, METHOD_SIZE_CANCEL) == 0)
+    {
+        message->method_type = CANCEL;
+    }
+    else if (message->method_length == METHOD_SIZE_OPTIONS && strncasecmp(message->method, METHOD_NAME_OPTIONS, METHOD_SIZE_OPTIONS) == 0)
+    {
+        message->method_type = OPTIONS;
+    }
+    else if (message->method_length == METHOD_SIZE_REGISTER && strncasecmp(message->method, METHOD_NAME_REGISTER, METHOD_SIZE_REGISTER) == 0)
+    {
+        message->method_type = REGISTER;
+    }
+    else if (message->method_length == METHOD_SIZE_PRACK && strncasecmp(message->method, METHOD_NAME_PRACK, METHOD_SIZE_PRACK) == 0)
+    {
+        message->method_type = PRACK;
+    }
+    else if (message->method_length == METHOD_SIZE_UPDATE && strncasecmp(message->method, METHOD_NAME_UPDATE, METHOD_SIZE_UPDATE) == 0)
+    {
+        message->method_type = UPDATE;
+    }
+    else if (message->method_length == METHOD_SIZE_SUBSCRIBE && strncasecmp(message->method, METHOD_NAME_SUBSCRIBE, METHOD_SIZE_SUBSCRIBE) == 0)
+    {
+        message->method_type = SUBSCRIBE;
+    }
+    else if (message->method_length == METHOD_SIZE_NOTIFY && strncasecmp(message->method, METHOD_NAME_NOTIFY, METHOD_SIZE_NOTIFY) == 0)
+    {
+        message->method_type = NOTIFY;
+    }
+    else if (message->method_length == METHOD_SIZE_PUBLISH && strncasecmp(message->method, METHOD_NAME_PUBLISH, METHOD_SIZE_PUBLISH) == 0)
+    {
+        message->method_type = PUBLISH;
+    }
+    else if (message->method_length == METHOD_SIZE_INFO && strncasecmp(message->method, METHOD_NAME_INFO, METHOD_SIZE_INFO) == 0)
+    {
+        message->method_type = INFO;
+    }
+    else if (message->method_length == METHOD_SIZE_REFER && strncasecmp(message->method, METHOD_NAME_REFER, METHOD_SIZE_REFER) == 0)
+    {
+        message->method_type = REFER;
+    }
+    else if (message->method_length == METHOD_SIZE_MESSAGE && strncasecmp(message->method, METHOD_NAME_MESSAGE, METHOD_SIZE_MESSAGE) == 0)
+    {
+        message->method_type = MESSAGE;
+    }
+    else
+    {
+        message->method_type = UNKNOWN;
+    }
+
+    return message->method_type;
 }

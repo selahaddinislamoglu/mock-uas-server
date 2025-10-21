@@ -26,6 +26,71 @@ typedef enum
     ERROR_MALFORMED_MESSAGE
 } sip_msg_error_t;
 
+#define METHOD_NAME_INVITE "INVITE"
+#define METHOD_NAME_ACK "ACK"
+#define METHOD_NAME_BYE "BYE"
+#define METHOD_NAME_CANCEL "CANCEL"
+#define METHOD_NAME_OPTIONS "OPTIONS"
+#define METHOD_NAME_REGISTER "REGISTER"
+#define METHOD_NAME_PRACK "PRACK"
+#define METHOD_NAME_UPDATE "UPDATE"
+#define METHOD_NAME_SUBSCRIBE "SUBSCRIBE"
+#define METHOD_NAME_NOTIFY "NOTIFY"
+#define METHOD_NAME_PUBLISH "PUBLISH"
+#define METHOD_NAME_INFO "INFO"
+#define METHOD_NAME_REFER "REFER"
+#define METHOD_NAME_MESSAGE "MESSAGE"
+
+#define METHOD_SIZE_INVITE 6
+#define METHOD_SIZE_ACK 3
+#define METHOD_SIZE_BYE 3
+#define METHOD_SIZE_CANCEL 6
+#define METHOD_SIZE_OPTIONS 7
+#define METHOD_SIZE_REGISTER 8
+#define METHOD_SIZE_PRACK 5
+#define METHOD_SIZE_UPDATE 6
+#define METHOD_SIZE_SUBSCRIBE 9
+#define METHOD_SIZE_NOTIFY 6
+#define METHOD_SIZE_PUBLISH 7
+#define METHOD_SIZE_INFO 4
+#define METHOD_SIZE_REFER 5
+#define METHOD_SIZE_MESSAGE 7
+
+typedef enum
+{
+    UNKNOWN,
+    INVITE,
+    ACK,
+    BYE,
+    CANCEL,
+    OPTIONS,
+    REGISTER,
+    PRACK,
+    UPDATE,
+    SUBSCRIBE,
+    NOTIFY,
+    PUBLISH,
+    INFO,
+    REFER,
+    MESSAGE,
+} sip_method_t;
+
+typedef enum
+{
+    RESPONSE_PROVISIONAL_START = 100,
+    RESPONSE_PROVISIONAL_END = 199,
+    RESPONSE_SUCCESS_START = 200,
+    RESPONSE_SUCCESS_END = 299,
+    RESPONSE_REDIRECTION_START = 300,
+    RESPONSE_REDIRECTION_END = 399,
+    RESPONSE_CLIENT_ERROR_START = 400,
+    RESPONSE_CLIENT_ERROR_END = 499,
+    RESPONSE_SERVER_ERROR_START = 500,
+    RESPONSE_SERVER_ERROR_END = 599,
+    RESPONSE_GLOBAL_FAILURE_START = 600,
+    RESPONSE_GLOBAL_FAILURE_END = 699
+} sip_response_range_t;
+
 /**
  * @struct sip_message_t
  * @brief Structure to hold SIP message data and client address information.
@@ -58,6 +123,7 @@ typedef struct
     const char *reason;
     size_t reason_length;
 
+    sip_method_t method_type;
     const char *method;
     size_t method_length;
 
@@ -74,7 +140,6 @@ const char *get_message_via(sip_message_t *message, size_t *length);
 const char *get_message_cseq(sip_message_t *message, size_t *length);
 
 sip_msg_error_t parse_message(sip_message_t *message);
-
-bool is_request(sip_message_t *message);
+sip_method_t get_message_method(sip_message_t *message);
 
 #endif // SIP_MESSAGE_H
