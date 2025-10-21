@@ -9,10 +9,6 @@
 #include <pthread.h>
 #include "message_queue.h"
 
-#define MAX_THREADS 5
-#define QUEUE_CAPACITY 10
-#define SIP_PORT 5060
-
 /**
  * @struct worker_thread_t
  * @brief Structure for worker thread and its associated message queue.
