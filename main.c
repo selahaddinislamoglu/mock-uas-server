@@ -37,6 +37,7 @@ int main()
     // Initialize worker threads and their queues
     for (int i = 0; i < MAX_THREADS; i++)
     {
+        worker_threads[i].calls = NULL;
         initialize_message_queue(&worker_threads[i].queue, QUEUE_CAPACITY);
         if (pthread_create(&worker_threads[i].thread, NULL, process_sip_messages, &worker_threads[i].queue) != 0)
         {
