@@ -1,6 +1,7 @@
 #include "sip_utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length)
 {
@@ -24,16 +25,9 @@ sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call
     {
         return NULL;
     }
-    new_call->call_id = (char *)malloc(call_id_length + 1);
-    if (new_call->call_id == NULL)
-    {
-        free(new_call);
-        return NULL;
-    }
-    strncpy(new_call->call_id, call_id, call_id_length);
-    new_call->call_id[call_id_length] = '\0';
+    memset(new_call, 0, sizeof(sip_call_t));
+    snprintf(new_call->call_id, sizeof(new_call->call_id), "%.*s", (int)call_id_length, call_id);
     new_call->call_id_length = call_id_length;
-    new_call->dialog = NULL;
     new_call->next = *calls;
     *calls = new_call;
     return new_call;
@@ -45,7 +39,6 @@ void cleanup_call(sip_call_t *call)
     {
         delete_all_dialogs(&call->dialog);
     }
-    free(call->call_id);
     free(call);
 }
 
@@ -115,18 +108,9 @@ sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, si
     {
         return NULL;
     }
-    new_dialog->from_tag = (char *)malloc(from_tag_length + 1);
-    if (new_dialog->from_tag == NULL)
-    {
-        free(new_dialog);
-        return NULL;
-    }
-    strncpy(new_dialog->from_tag, from_tag, from_tag_length);
-    new_dialog->from_tag[from_tag_length] = '\0';
+    memset(new_dialog, 0, sizeof(sip_dialog_t));
+    snprintf(new_dialog->from_tag, sizeof(new_dialog->from_tag), "%.*s", (int)from_tag_length, from_tag);
     new_dialog->from_tag_length = from_tag_length;
-    new_dialog->to_tag = NULL;
-    new_dialog->to_tag_length = 0;
-    new_dialog->transaction = NULL;
     new_dialog->next = *dialogs;
     *dialogs = new_dialog;
     return new_dialog;
@@ -137,11 +121,6 @@ void cleanup_dialog(sip_dialog_t *dialog)
     if (dialog->transaction != NULL)
     {
         delete_all_transactions(&dialog->transaction);
-    }
-    free(dialog->from_tag);
-    if (dialog->to_tag != NULL)
-    {
-        free(dialog->to_tag);
     }
     free(dialog);
 }
@@ -211,14 +190,8 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
     {
         return NULL;
     }
-    new_transaction->branch = (char *)malloc(branch_length + 1);
-    if (new_transaction->branch == NULL)
-    {
-        free(new_transaction);
-        return NULL;
-    }
-    strncpy(new_transaction->branch, branch, branch_length);
-    new_transaction->branch[branch_length] = '\0';
+    memset(new_transaction, 0, sizeof(sip_transaction_t));
+    snprintf(new_transaction->branch, sizeof(new_transaction->branch), "%.*s", (int)branch_length, branch);
     new_transaction->branch_length = branch_length;
     new_transaction->next = *transactions;
     *transactions = new_transaction;
@@ -228,7 +201,6 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
 void cleanup_transaction(sip_transaction_t *transaction)
 {
     cleanup_sip_message(transaction->last_message);
-    free(transaction->branch);
     free(transaction);
 }
 

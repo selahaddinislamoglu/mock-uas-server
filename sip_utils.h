@@ -24,7 +24,7 @@ struct sip_transaction
     //
     sip_transaction_state_t state;
     sip_message_t *last_message;
-    char *branch;
+    char branch[SIP_BRANCH_MAX_LENGTH + 1];
     size_t branch_length;
 };
 typedef struct sip_transaction sip_transaction_t;
@@ -43,9 +43,9 @@ struct sip_dialog
     sip_transaction_t *transaction;
     //
     sip_dialog_state_t state;
-    char *from_tag;
+    char from_tag[SIP_TAG_MAX_LENGTH + 1];
     size_t from_tag_length;
-    char *to_tag;
+    char to_tag[SIP_TAG_MAX_LENGTH + 1];
     size_t to_tag_length;
 };
 typedef struct sip_dialog sip_dialog_t;
@@ -66,7 +66,7 @@ struct sip_call
     sip_dialog_t *dialog;
     //
     sip_call_state_t state;
-    char *call_id;
+    char call_id[SIP_CALL_ID_MAX_LENGTH + 1];
     size_t call_id_length;
 };
 typedef struct sip_call sip_call_t;
