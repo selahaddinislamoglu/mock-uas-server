@@ -22,12 +22,12 @@ int send_message(int server_socket, char *message, size_t message_length, struct
     return 0;
 }
 
-void send_sip_error_response(int server_socket, sip_message_t *request, const char *status_code, const char *reason)
+void send_sip_error_response(int server_socket, sip_message_t *request, int status_code, const char *reason)
 {
-    printf("Sending SIP error response: %s %s\n", status_code, reason);
+    printf("Sending SIP error response: %d %s\n", status_code, reason);
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %s %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         status_code, reason,
                                         (int)request->via_length, request->via,
@@ -38,9 +38,9 @@ void send_sip_error_response(int server_socket, sip_message_t *request, const ch
     send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
 }
 
-int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, const char *status_code, const char *reason)
+int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, int status_code, const char *reason)
 {
-    printf("Sending SIP error response over transaction: %s %s\n", status_code, reason);
+    printf("Sending SIP error response over transaction: %d %s\n", status_code, reason);
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
@@ -49,7 +49,7 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
     }
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %s %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         status_code, reason,
                                         (int)request->via_length, request->via,
@@ -57,8 +57,9 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
                                         (int)request->to_length, request->to,
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
+    transaction->final_response_code = status_code;
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-    // TODO
+    // TODO retransmit
 }
 
 int send_100_trying_response_over_transaction(int server_socket, sip_transaction_t *transaction)
@@ -73,15 +74,17 @@ int send_100_trying_response_over_transaction(int server_socket, sip_transaction
     }
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_100 " " RESPONSE_TEXT_TRYING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_100_TRYING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
+                                        RESPONSE_CODE_100,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
+    transaction->final_response_code = RESPONSE_CODE_100;
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-    // TODO
+    // TODO retransmit
 }
 
 int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t *transaction)
@@ -95,15 +98,18 @@ int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t
     }
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_180 " " RESPONSE_TEXT_RINGING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_180_RINGING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;" PARAM_NAME_TAG "=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
+                                        RESPONSE_CODE_180,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
+                                        (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag,
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
+    transaction->final_response_code = RESPONSE_CODE_180;
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-    // TODO
+    // TODO retransmit
 }
 
 int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction_t *transaction)
@@ -117,16 +123,18 @@ int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction
     }
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_200 " " RESPONSE_TEXT_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;" PARAM_NAME_TAG "=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_200_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;" PARAM_NAME_TAG "=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
+                                        RESPONSE_CODE_200,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
-                                        (int)request->to_tag_length, request->to_tag,
+                                        (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag,
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
+    transaction->final_response_code = RESPONSE_CODE_200;
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-    // TODO
+    // TODO retransmit
 }
 
 // TODO, do we need to update client address info from via header?
@@ -140,7 +148,7 @@ int send_last_response_over_transaction(int server_socket, sip_transaction_t *tr
         return -1;
     }
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-    // TODO
+    // TODO retransmit
 }
 
 int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
@@ -165,7 +173,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         if (send_100_trying_response_over_transaction(worker->server_socket, transaction) != 0)
         {
             printf("Failed to send 100 Trying response\n");
-            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
         }
@@ -176,7 +184,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         if (dialog == NULL)
         {
             printf("Failed to create new SIP dialog\n");
-            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
         }
@@ -189,7 +197,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         if (call == NULL)
         {
             printf("Failed to create new SIP call\n");
-            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
         }
@@ -200,7 +208,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         if (send_180_ring_response_over_transaction(worker->server_socket, transaction) != 0)
         {
             printf("Failed to send 180 Ringing response\n");
-            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
         }
@@ -210,7 +218,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         if (send_sip_200_ok_response_over_transaction(worker->server_socket, transaction) != 0)
         {
             printf("Failed to send 200 OK response\n");
-            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
         }
@@ -227,11 +235,46 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
     printf("Processing SIP ACK request\n");
+
+    if (transaction->state == SIP_TRANSACTION_STATE_COMPLETED && transaction->message->method_type == INVITE && transaction->ack_message != NULL && transaction->ack_message->method_type == ACK)
+    {
+        // ack for failed INVITE
+        printf("ACK for failed INVITE\n");
+        transaction->state = SIP_TRANSACTION_STATE_CONFIRMED;
+        // TODO resource cleanup
+    }
+    else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
+    {
+        // ACK for successful INVITE
+        printf("ACK for successful INVITE\n");
+        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+        // TODO resource cleanup
+    }
+    else
+    {
+        // ACK for other requests
+        printf("ACK for other requests\n");
+        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+        // TODO resource cleanup
+    }
 }
 
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
     printf("Processing SIP BYE request\n");
+
+    if (transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
+    {
+        send_sip_200_ok_response_over_transaction(worker->server_socket, transaction);
+        transaction->dialog->call->state = SIP_CALL_STATE_TERMINATED;
+        transaction->dialog->state = SIP_DIALOG_STATE_TERMINATED;
+        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+    }
+    else
+    {
+        send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_403, RESPONSE_TEXT_403_FORBIDDEN);
+    }
+    // TODO resource cleanup
 }
 
 void process_sip_request(worker_thread_t *worker, sip_message_t *message)
@@ -243,7 +286,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         if (transaction == NULL)
         {
             printf("Failed to create new SIP transaction\n");
-            send_sip_error_response(worker->server_socket, message, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response(worker->server_socket, message, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             cleanup_sip_message(message);
             return;
         }
@@ -274,7 +317,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
             if (send_last_response_over_transaction(worker->server_socket, transaction) != 0)
             {
                 printf("Failed to resend last response over transaction\n");
-                send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+                send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             }
             cleanup_sip_message(message);
             return;
@@ -283,7 +326,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 
     if (transaction->dialog == NULL)
     {
-        sip_dialog_t *dialog = find_dialog_by_id(worker->dialogs, message->from_tag, message->from_tag_length, NULL, 0);
+        sip_dialog_t *dialog = find_dialog_by_id(worker->dialogs, message->from_tag, message->from_tag_length, message->to_tag, message->to_tag_length);
         if (dialog != NULL)
         {
             set_transaction_dialog(transaction, dialog);
@@ -302,7 +345,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
     default:
         // TODO other methods
         printf("Unsupported SIP method: %s\n", message->method);
-        send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_NOT_IMPLEMENTED);
+        send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_501_NOT_IMPLEMENTED);
         // TODO resource cleanup
     }
 }
@@ -310,31 +353,37 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 void process_provisional_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP provisional response\n");
+    cleanup_sip_message(message);
 }
 
 void process_successful_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP successful response\n");
+    cleanup_sip_message(message);
 }
 
 void process_redirection_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP redirection response\n");
+    cleanup_sip_message(message);
 }
 
 void process_client_error_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP client error response\n");
+    cleanup_sip_message(message);
 }
 
 void process_server_error_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP server error response\n");
+    cleanup_sip_message(message);
 }
 
 void process_global_failure_response(worker_thread_t *worker, sip_message_t *message)
 {
     printf("Processing SIP global failure response\n");
+    cleanup_sip_message(message);
 }
 
 void process_sip_response(worker_thread_t *worker, sip_message_t *message)
@@ -347,27 +396,27 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
         return;
     }
 
-    if (message->status_code >= RESPONSE_PROVISIONAL_START && message->status_code <= RESPONSE_PROVISIONAL_END)
+    if (message->status_code >= RESPONSE_CODE_PROVISIONAL_START && message->status_code <= RESPONSE_CODE_PROVISIONAL_END)
     {
         return process_provisional_response(worker, message);
     }
-    else if (message->status_code >= RESPONSE_SUCCESS_START && message->status_code <= RESPONSE_SUCCESS_END)
+    else if (message->status_code >= RESPONSE_CODE_SUCCESS_START && message->status_code <= RESPONSE_CODE_SUCCESS_END)
     {
         return process_successful_response(worker, message);
     }
-    else if (message->status_code >= RESPONSE_REDIRECTION_START && message->status_code <= RESPONSE_REDIRECTION_END)
+    else if (message->status_code >= RESPONSE_CODE_REDIRECTION_START && message->status_code <= RESPONSE_CODE_REDIRECTION_END)
     {
         return process_redirection_response(worker, message);
     }
-    else if (message->status_code >= RESPONSE_CLIENT_ERROR_START && message->status_code <= RESPONSE_CLIENT_ERROR_END)
+    else if (message->status_code >= RESPONSE_CODE_CLIENT_ERROR_START && message->status_code <= RESPONSE_CODE_CLIENT_ERROR_END)
     {
         return process_client_error_response(worker, message);
     }
-    else if (message->status_code >= RESPONSE_SERVER_ERROR_START && message->status_code <= RESPONSE_SERVER_ERROR_END)
+    else if (message->status_code >= RESPONSE_CODE_SERVER_ERROR_START && message->status_code <= RESPONSE_CODE_SERVER_ERROR_END)
     {
         return process_server_error_response(worker, message);
     }
-    else if (message->status_code >= RESPONSE_GLOBAL_FAILURE_START && message->status_code <= RESPONSE_GLOBAL_FAILURE_END)
+    else if (message->status_code >= RESPONSE_CODE_GLOBAL_FAILURE_START && message->status_code <= RESPONSE_CODE_GLOBAL_FAILURE_END)
     {
         return process_global_failure_response(worker, message);
     }

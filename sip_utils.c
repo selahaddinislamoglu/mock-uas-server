@@ -165,7 +165,6 @@ void create_to_tag(char *to_tag_buffer, size_t buffer_size)
         c = '0' + (rand() % 10);
         to_tag_buffer[i] = c;
     }
-    to_tag_buffer[buffer_size] = '\0';
 }
 
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length)
@@ -178,7 +177,8 @@ sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, si
     memset(new_dialog, 0, sizeof(sip_dialog_t));
     snprintf(new_dialog->from_tag, sizeof(new_dialog->from_tag), "%.*s", (int)from_tag_length, from_tag);
     new_dialog->from_tag_length = from_tag_length;
-    create_to_tag(new_dialog->to_tag, sizeof(new_dialog->to_tag));
+    create_to_tag(new_dialog->to_tag, SIP_BUILD_TAG_LENGTH);
+    new_dialog->to_tag_length = SIP_BUILD_TAG_LENGTH;
     new_dialog->next = *dialogs;
     *dialogs = new_dialog;
     return new_dialog;

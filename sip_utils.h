@@ -54,6 +54,7 @@ struct sip_transaction_s
     sip_message_t *ack_message;
     char branch[SIP_BRANCH_MAX_LENGTH + 1];
     size_t branch_length;
+    int final_response_code;
 };
 
 struct sip_dialog_s

@@ -250,7 +250,8 @@ const char *get_from_tag(sip_message_t *message, size_t *length)
     {
         tag_start++;
     }
-    const char *tag_end = strchr(tag_start, ';');
+    tag_start += 4;
+    const char *tag_end = strchr(tag_start, '\r');
     if (tag_end == NULL)
     {
         tag_end = message->from + message->from_length;
@@ -277,7 +278,8 @@ const char *get_to_tag(sip_message_t *message, size_t *length)
     {
         tag_start++;
     }
-    const char *tag_end = strchr(tag_start, ';');
+    tag_start += 4;
+    const char *tag_end = strchr(tag_start, '\r');
     if (tag_end == NULL)
     {
         tag_end = message->to + message->to_length;
@@ -361,6 +363,8 @@ sip_msg_error_t parse_message(sip_message_t *message)
         printf("To header is missing\n");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
+
+    get_to_tag(message, &length);
 
     // Check for Via header
     header = get_message_via(message, &length);
