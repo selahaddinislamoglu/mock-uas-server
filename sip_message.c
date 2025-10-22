@@ -328,6 +328,13 @@ sip_msg_error_t parse_message(sip_message_t *message)
         return err;
     }
 
+    sip_method_t method = get_message_method(message);
+    if (method == UNKNOWN)
+    {
+        printf("Unknown method\n");
+        return ERROR_UNKNOWN_METHOD;
+    }
+
     // Check mandatory headers
     // Call-ID header checked before calling this function
 

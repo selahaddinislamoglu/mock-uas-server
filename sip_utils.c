@@ -283,6 +283,12 @@ void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *tra
     }
 }
 
+void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
+{
+    dialog->call = call;
+    add_dialog_to_call(call, dialog);
+}
+
 void delete_all_dialogs(sip_dialog_t **dialogs)
 {
     sip_dialog_t *current = *dialogs;

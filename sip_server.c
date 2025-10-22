@@ -166,22 +166,23 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to send 100 Trying response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+            // TODO resource cleanup
             return;
         }
+
+        transaction->state = SIP_TRANSACTION_STATE_PROCEEDING;
 
         sip_dialog_t *dialog = create_new_dialog(&worker->dialogs, request->from_tag, request->from_tag_length);
         if (dialog == NULL)
         {
             printf("Failed to create new SIP dialog\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+            // TODO resource cleanup
             return;
         }
 
-        add_transaction_to_dialog(dialog, transaction);
-        dialog->state = SIP_DIALOG_STATE_EARLY;
         set_transaction_dialog(transaction, dialog);
+        dialog->state = SIP_DIALOG_STATE_EARLY;
 
         // TODO check if call exists, it would be re-INVITE
         sip_call_t *call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
@@ -189,21 +190,18 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to create new SIP call\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
-            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
+            // TODO resource cleanup
             return;
         }
 
-        add_dialog_to_call(call, dialog);
+        set_dialog_call(dialog, call);
         call->state = SIP_CALL_STATE_INCOMING;
 
         if (send_180_ring_response_over_transaction(worker->server_socket, transaction) != 0)
         {
             printf("Failed to send 180 Ringing response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
-            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
-            delete_call_by_pointer(&worker->calls, call);                      // TODO must be done after call timeout
+            // TODO resource cleanup
             return;
         }
 
@@ -213,47 +211,16 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to send 200 OK response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
-            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
-            delete_call_by_pointer(&worker->calls, call);                      // TODO must be done after call timeout
+            // TODO resource cleanup
             return;
         }
         transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
-        dialog->state = SIP_DIALOG_STATE_CONFIRMED;
+        dialog->state = SIP_TRANSACTION_STATE_COMPLETED;
         call->state = SIP_CALL_STATE_ESTABLISHED;
     }
     else
-    { // retransmission of INVITE
-        switch (transaction->state)
-        {
-        case SIP_TRANSACTION_STATE_PROCEEDING:
-        case SIP_TRANSACTION_STATE_COMPLETED:
-        case SIP_TRANSACTION_STATE_TERMINATED:
-
-            const char *cseq = NULL;
-            size_t cseq_length = 0;
-            cseq = get_message_cseq(request, &cseq_length);
-            if (cseq_length != transaction->message->cseq_length ||
-                strncmp(cseq, transaction->message->cseq, cseq_length) != 0 ||
-                sockaddr_in_equal(&request->client_addr, &transaction->message->client_addr) != 0)
-            {
-                printf("Received INVITE is different than existing transaction, ignoring\n");
-                // TODO for this case it is need to be create new transaction? but i dont have any idea how to differentiate them
-            }
-            else
-            {
-                if (send_last_response_over_transaction(worker->server_socket, transaction) != 0)
-                {
-                    printf("Failed to resend last response over transaction\n");
-                    send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-                }
-            }
-            break;
-
-        default:
-            break;
-        }
-        cleanup_sip_message(request);
+    {
+        // TODO re-INVITE
     }
 }
 
@@ -281,8 +248,37 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
             return;
         }
 
-        transaction->state = SIP_TRANSACTION_STATE_PROCEEDING;
         transaction->message = message;
+    }
+    else
+    {
+        if (message->cseq_length != transaction->message->cseq_length ||
+            strncmp(message->cseq, transaction->message->cseq, message->cseq_length) != 0 ||
+            sockaddr_in_equal(&message->client_addr, &transaction->message->client_addr) != 0)
+        {
+            printf("Received message is different than existing transaction message.\n");
+            if (transaction->message->method_type == INVITE && message->method_type == ACK)
+            {
+                printf("ACK for INVITE\n");
+                transaction->ack_message = message;
+            }
+            else
+            {
+                printf("New request for existing transaction branch id\n");
+                cleanup_sip_message(message);
+                return;
+            }
+        }
+        else
+        {
+            if (send_last_response_over_transaction(worker->server_socket, transaction) != 0)
+            {
+                printf("Failed to resend last response over transaction\n");
+                send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            }
+            cleanup_sip_message(message);
+            return;
+        }
     }
 
     if (transaction->dialog == NULL)
@@ -307,7 +303,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         // TODO other methods
         printf("Unsupported SIP method: %s\n", message->method);
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_NOT_IMPLEMENTED);
-        delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+        // TODO resource cleanup
     }
 }
 

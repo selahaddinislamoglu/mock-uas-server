@@ -14,7 +14,7 @@
 
 typedef enum
 {
-    SIP_TRANSACTION_STATE_NONE = 0,
+    SIP_TRANSACTION_STATE_IDLE = 0,
     SIP_TRANSACTION_STATE_PROCEEDING,
     SIP_TRANSACTION_STATE_COMPLETED,
     SIP_TRANSACTION_STATE_CONFIRMED,
@@ -23,7 +23,7 @@ typedef enum
 
 typedef enum
 {
-    SIP_DIALOG_STATE_NONE = 0,
+    SIP_DIALOG_STATE_IDLE = 0,
     SIP_DIALOG_STATE_EARLY,
     SIP_DIALOG_STATE_CONFIRMED,
     SIP_DIALOG_STATE_TERMINATED
@@ -35,6 +35,7 @@ typedef enum
     SIP_CALL_STATE_INCOMING,
     SIP_CALL_STATE_RINGING,
     SIP_CALL_STATE_ESTABLISHED,
+    SIP_CALL_STATE_FAILED,
     SIP_CALL_STATE_TERMINATING,
     SIP_CALL_STATE_TERMINATED
 } sip_call_state_t;
@@ -50,6 +51,7 @@ struct sip_transaction_s
     sip_dialog_t *dialog;
     sip_transaction_state_t state;
     sip_message_t *message;
+    sip_message_t *ack_message;
     char branch[SIP_BRANCH_MAX_LENGTH + 1];
     size_t branch_length;
 };
@@ -95,6 +97,7 @@ void delete_all_dialogs(sip_dialog_t **dialogs);
 void create_to_tag(char *to_tag_buffer, size_t buffer_size);
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
+void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call);
 
 sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length);
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
