@@ -96,11 +96,12 @@ void create_to_tag(char *to_tag_buffer, size_t buffer_size);
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 
-sip_transaction_t *find_transaction_by_branch(sip_transaction_t *transactions, const char *branch, size_t branch_length);
+sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length);
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
 void delete_transaction_by_id(sip_transaction_t **transactions, const char *branch, size_t branch_length);
 void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transaction_t *transaction);
 void cleanup_transaction(sip_transaction_t *transaction);
 void delete_all_transactions(sip_transaction_t **transactions);
+void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog);
 
 #endif // SIP_UTILS_H

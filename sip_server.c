@@ -158,16 +158,6 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 {
     printf("Processing SIP INVITE request\n");
     sip_message_t *request = transaction->message;
-    sip_dialog_t *dialog = NULL;
-
-    if (transaction->dialog == NULL)
-    {
-        dialog = find_dialog_by_id(worker->dialogs, request->from_tag, request->from_tag_length, NULL, 0);
-        if (dialog != NULL)
-        {
-            transaction->dialog = dialog;
-        }
-    }
 
     if (transaction->dialog == NULL)
     { // new INVITE request
@@ -191,7 +181,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 
         add_transaction_to_dialog(dialog, transaction);
         dialog->state = SIP_DIALOG_STATE_EARLY;
-        transaction->dialog = dialog;
+        set_transaction_dialog(transaction, dialog);
 
         // TODO check if call exists, it would be re-INVITE
         sip_call_t *call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
@@ -279,7 +269,7 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
 
 void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 {
-    sip_transaction_t *transaction = find_transaction_by_branch(worker->transactions, message->branch, message->branch_length);
+    sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
     if (transaction == NULL)
     {
         transaction = create_new_transaction(&worker->transactions, message->branch, message->branch_length);
@@ -293,6 +283,15 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 
         transaction->state = SIP_TRANSACTION_STATE_PROCEEDING;
         transaction->message = message;
+    }
+
+    if (transaction->dialog == NULL)
+    {
+        sip_dialog_t *dialog = find_dialog_by_id(worker->dialogs, message->from_tag, message->from_tag_length, NULL, 0);
+        if (dialog != NULL)
+        {
+            set_transaction_dialog(transaction, dialog);
+        }
     }
 
     sip_method_t method = get_message_method(message);
@@ -344,7 +343,7 @@ void process_global_failure_response(worker_thread_t *worker, sip_message_t *mes
 
 void process_sip_response(worker_thread_t *worker, sip_message_t *message)
 {
-    sip_transaction_t *transaction = find_transaction_by_branch(worker->transactions, message->branch, message->branch_length);
+    sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
     if (transaction == NULL)
     {
         printf("No matching transaction found for SIP response with branch: %.*s\n", (int)message->branch_length, message->branch);

@@ -105,13 +105,22 @@ void delete_all_calls(sip_call_t **calls)
 
 void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
 { // TODO boundary check
+    int reserved = -1;
     for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
     {
-        if (call->dialog[i] == NULL)
+        if (reserved == -1 && call->dialog[i] == NULL)
         {
-            call->dialog[i] = dialog;
+            reserved = i;
+        }
+
+        if (call->dialog[i] == dialog)
+        {
             return;
         }
+    }
+    if (reserved != -1)
+    {
+        call->dialog[reserved] = dialog;
     }
 }
 
@@ -240,14 +249,24 @@ void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
 }
 
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
-{ // TODO boundary check
+{
+    // TODO boundary check
+    int reserved = -1;
     for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
     {
-        if (dialog->transaction[i] == NULL)
+        if (reserved == -1 && dialog->transaction[i] == NULL)
         {
-            dialog->transaction[i] = transaction;
+            reserved = i;
+        }
+
+        if (dialog->transaction[i] == transaction)
+        {
             return;
         }
+    }
+    if (reserved != -1)
+    {
+        dialog->transaction[reserved] = transaction;
     }
 }
 
@@ -278,7 +297,7 @@ void delete_all_dialogs(sip_dialog_t **dialogs)
     *dialogs = NULL;
 }
 
-sip_transaction_t *find_transaction_by_branch(sip_transaction_t *transactions, const char *branch, size_t branch_length)
+sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length)
 {
     sip_transaction_t *current = transactions;
     while (current != NULL)
@@ -380,4 +399,10 @@ void delete_all_transactions(sip_transaction_t **transactions)
         current = next;
     }
     *transactions = NULL;
+}
+
+void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog)
+{
+    transaction->dialog = dialog;
+    add_transaction_to_dialog(dialog, transaction);
 }
