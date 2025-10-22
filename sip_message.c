@@ -339,6 +339,14 @@ sip_msg_error_t parse_message(sip_message_t *message)
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
+    // check for From tag
+    header = get_from_tag(message, &length);
+    if (header == NULL || length == 0)
+    {
+        printf("From tag parameter is missing in From header\n");
+        return ERROR_MISSING_MANDATORY_PARAMETER;
+    }
+
     // Check for To header
     header = get_message_to(message, &length);
     if (header == NULL || length == 0)
@@ -353,6 +361,14 @@ sip_msg_error_t parse_message(sip_message_t *message)
     {
         printf("Via header is missing\n");
         return ERROR_MISSING_MANDATORY_HEADER;
+    }
+
+    // Check for Branch parameter in Via header
+    header = get_branch_param(message, &length);
+    if (header == NULL || length == 0)
+    {
+        printf("Branch parameter is missing in Via header\n");
+        return ERROR_MISSING_MANDATORY_PARAMETER;
     }
 
     // Check for CSeq header

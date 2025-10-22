@@ -28,11 +28,15 @@
 #define HEADER_NAME_MAX_FORWARDS "Max-Forwards"
 #define HEADER_NAME_CONTENT_LENGTH "Content-Length"
 
+#define PARAM_NAME_BRANCH "branch"
+#define PARAM_NAME_TAG "tag"
+
 typedef enum
 {
     ERROR_NONE = 0,
     ERROR_MALFORMED_MESSAGE,
-    ERROR_MISSING_MANDATORY_HEADER
+    ERROR_MISSING_MANDATORY_HEADER,
+    ERROR_MISSING_MANDATORY_PARAMETER,
 } sip_msg_error_t;
 
 #define METHOD_NAME_INVITE "INVITE"
@@ -106,11 +110,17 @@ typedef enum
 #define RESPONSE_CODE_300 "300"
 #define RESPONSE_CODE_400 "400"
 #define RESPONSE_CODE_500 "500"
+#define RESPONSE_CODE_501 "501"
 #define RESPONSE_CODE_600 "600"
 
 #define RESPONSE_TEXT_TRYING "Trying"
 #define RESPONSE_TEXT_RINGING "Ringing"
 #define RESPONSE_TEXT_OK "OK"
+#define RESPONSE_TEXT_BAD_REQUEST "Bad Request"
+#define RESPONSE_TEXT_NOT_IMPLEMENTED "Not Implemented"
+#define RESPONSE_TEXT_INTERNAL_SERVER_ERROR "Internal Server Error"
+#define RESPONSE_TEXT_SERVICE_UNAVAILABLE "Service Unavailable"
+#define RESPONSE_TEXT_GLOBAL_FAILURE "Global Failure"
 
 /**
  * @struct sip_message_t

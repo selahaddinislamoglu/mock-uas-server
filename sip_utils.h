@@ -18,17 +18,6 @@ typedef enum
     SIP_TRANSACTION_STATE_TERMINATED
 } sip_transaction_state_t;
 
-struct sip_transaction
-{
-    struct sip_transaction *next;
-    //
-    sip_transaction_state_t state;
-    sip_message_t *last_message;
-    char branch[SIP_BRANCH_MAX_LENGTH + 1];
-    size_t branch_length;
-};
-typedef struct sip_transaction sip_transaction_t;
-
 typedef enum
 {
     SIP_DIALOG_STATE_NONE = 0,
@@ -36,19 +25,6 @@ typedef enum
     SIP_DIALOG_STATE_CONFIRMED,
     SIP_DIALOG_STATE_TERMINATED
 } sip_dialog_state_t;
-
-struct sip_dialog
-{
-    struct sip_dialog *next;
-    sip_transaction_t *transaction;
-    //
-    sip_dialog_state_t state;
-    char from_tag[SIP_TAG_MAX_LENGTH + 1];
-    size_t from_tag_length;
-    char to_tag[SIP_TAG_MAX_LENGTH + 1];
-    size_t to_tag_length;
-};
-typedef struct sip_dialog sip_dialog_t;
 
 typedef enum
 {
@@ -60,32 +36,63 @@ typedef enum
     SIP_CALL_STATE_TERMINATED
 } sip_call_state_t;
 
-struct sip_call
+typedef struct sip_call_s sip_call_t;
+typedef struct sip_dialog_s sip_dialog_t;
+typedef struct sip_transaction_s sip_transaction_t;
+
+struct sip_transaction_s
 {
-    struct sip_call *next;
+    struct sip_transaction_s *next;
+    //
+    sip_dialog_t *dialog;
+    sip_transaction_state_t state;
+    sip_message_t *message;
+    char branch[SIP_BRANCH_MAX_LENGTH + 1];
+    size_t branch_length;
+};
+
+struct sip_dialog_s
+{
+    struct sip_dialog_s *next;
+    sip_transaction_t *transaction;
+    //
+    sip_call_t *call;
+    sip_dialog_state_t state;
+    char from_tag[SIP_TAG_MAX_LENGTH + 1];
+    size_t from_tag_length;
+    char to_tag[SIP_TAG_MAX_LENGTH + 1];
+    size_t to_tag_length;
+};
+
+struct sip_call_s
+{
+    struct sip_call_s *next;
     sip_dialog_t *dialog;
     //
     sip_call_state_t state;
     char call_id[SIP_CALL_ID_MAX_LENGTH + 1];
     size_t call_id_length;
 };
-typedef struct sip_call sip_call_t;
 
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length);
 sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call_id_length);
 void delete_call(sip_call_t **calls, const char *call_id, size_t call_id_length);
+// TODO delete call by pointer
 void cleanup_call(sip_call_t *call);
 void delete_all_calls(sip_call_t **calls);
 
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length);
 void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
+// TODO delete dialog by pointer
 void cleanup_dialog(sip_dialog_t *dialog);
 void delete_all_dialogs(sip_dialog_t **dialogs);
+void create_to_tag(char *to_tag_buffer, size_t buffer_size);
 
 sip_transaction_t *find_transaction_by_branch(sip_transaction_t *transactions, const char *branch, size_t branch_length);
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
 void delete_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
+// TODO delete transaction by pointer
 void cleanup_transaction(sip_transaction_t *transaction);
 void delete_all_transactions(sip_transaction_t **transactions);
 
