@@ -9,21 +9,40 @@
 #include <stddef.h>
 #include "sip_message.h"
 
+typedef enum
+{
+    SIP_TRANSACTION_STATE_NONE = 0,
+    SIP_TRANSACTION_STATE_PROCEEDING,
+    SIP_TRANSACTION_STATE_COMPLETED,
+    SIP_TRANSACTION_STATE_CONFIRMED,
+    SIP_TRANSACTION_STATE_TERMINATED
+} sip_transaction_state_t;
+
 struct sip_transaction
 {
     struct sip_transaction *next;
     //
+    sip_transaction_state_t state;
     sip_message_t *last_message;
     char *branch;
     size_t branch_length;
 };
 typedef struct sip_transaction sip_transaction_t;
 
+typedef enum
+{
+    SIP_DIALOG_STATE_NONE = 0,
+    SIP_DIALOG_STATE_EARLY,
+    SIP_DIALOG_STATE_CONFIRMED,
+    SIP_DIALOG_STATE_TERMINATED
+} sip_dialog_state_t;
+
 struct sip_dialog
 {
     struct sip_dialog *next;
     sip_transaction_t *transaction;
     //
+    sip_dialog_state_t state;
     char *from_tag;
     size_t from_tag_length;
     char *to_tag;
@@ -31,11 +50,22 @@ struct sip_dialog
 };
 typedef struct sip_dialog sip_dialog_t;
 
+typedef enum
+{
+    SIP_CALL_STATE_IDLE = 0,
+    SIP_CALL_STATE_INCOMING,
+    SIP_CALL_STATE_RINGING,
+    SIP_CALL_STATE_ESTABLISHED,
+    SIP_CALL_STATE_TERMINATING,
+    SIP_CALL_STATE_TERMINATED
+} sip_call_state_t;
+
 struct sip_call
 {
     struct sip_call *next;
     sip_dialog_t *dialog;
     //
+    sip_call_state_t state;
     char *call_id;
     size_t call_id_length;
 };

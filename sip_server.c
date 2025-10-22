@@ -56,6 +56,20 @@ int send_180_ring_response(int server_socket, sip_message_t *request)
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
 }
 
+int send_sip_200_ok_response(int server_socket, sip_message_t *request)
+{
+    printf("Sending 200 OK response\n");
+    request->response_length = snprintf(request->response, sizeof(request->response),
+                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_200 " " RESPONSE_TEXT_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                                                 "\r\n",
+                                        (int)request->via_length, request->via,
+                                        (int)request->from_length, request->from,
+                                        (int)request->to_length, request->to,
+                                        (int)request->call_id_length, request->call_id,
+                                        (int)request->cseq_length, request->cseq);
+    return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
+}
+
 void process_invite_request(worker_thread_t *worker, sip_message_t *request)
 {
     printf("Processing SIP INVITE request\n");
@@ -63,10 +77,22 @@ void process_invite_request(worker_thread_t *worker, sip_message_t *request)
     sip_call_t *call = find_call_by_id(worker->calls, request->call_id, request->call_id_length);
     if (call == NULL)
     {
+        sip_call_t *new_call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
+        if (new_call == NULL)
+        {
+            printf("Failed to create new SIP call\n");
+            send_sip_error_response(request, 500, "Internal Server Error");
+            cleanup_sip_message(request);
+            return;
+        }
+
+        new_call->state = SIP_CALL_STATE_INCOMING;
+
         if (send_100_trying_response(worker->server_socket, request) != 0)
         {
             printf("Failed to send 100 Trying response\n");
             send_sip_error_response(request, 500, "Internal Server Error");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
             cleanup_sip_message(request);
             return;
         }
@@ -78,26 +104,7 @@ void process_invite_request(worker_thread_t *worker, sip_message_t *request)
         {
             printf("From tag is missing in INVITE request\n");
             send_sip_error_response(request, 400, "Bad Request");
-            cleanup_sip_message(request);
-            return;
-        }
-
-        const char *branch = NULL;
-        size_t branch_length = 0;
-        branch = get_branch_param(request, &branch_length);
-        if (branch == NULL)
-        {
-            printf("Via branch is missing in INVITE request\n");
-            send_sip_error_response(request, 400, "Bad Request");
-            cleanup_sip_message(request);
-            return;
-        }
-
-        sip_call_t *new_call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
-        if (new_call == NULL)
-        {
-            printf("Failed to create new SIP call\n");
-            send_sip_error_response(request, 500, "Internal Server Error");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
             cleanup_sip_message(request);
             return;
         }
@@ -106,8 +113,22 @@ void process_invite_request(worker_thread_t *worker, sip_message_t *request)
         if (dialog == NULL)
         {
             printf("Failed to create new SIP dialog\n");
-            delete_call(&worker->calls, request->call_id, request->call_id_length);
             send_sip_error_response(request, 500, "Internal Server Error");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
+            cleanup_sip_message(request);
+            return;
+        }
+
+        dialog->state = SIP_DIALOG_STATE_EARLY;
+
+        const char *branch = NULL;
+        size_t branch_length = 0;
+        branch = get_branch_param(request, &branch_length);
+        if (branch == NULL)
+        {
+            printf("Via branch is missing in INVITE request\n");
+            send_sip_error_response(request, 400, "Bad Request");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
             cleanup_sip_message(request);
             return;
         }
@@ -116,17 +137,18 @@ void process_invite_request(worker_thread_t *worker, sip_message_t *request)
         if (transaction == NULL)
         {
             printf("Failed to create new SIP transaction\n");
-            delete_call(&worker->calls, request->call_id, request->call_id_length);
             send_sip_error_response(request, 500, "Internal Server Error");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
             cleanup_sip_message(request);
             return;
         }
+        // TODO after transaction creation, maybe need to set timer for non-200 responses retransmissions and call delete_call after timeout
 
+        transaction->state = SIP_TRANSACTION_STATE_PROCEEDING;
         transaction->last_message = request;
 
         // build and send 180 Ringing response here
-        // TODO maybe we need to create timer for invoking 180 Ringing response to work like actual UAS
-
+        // TODO to simulate call setup delay, send 180 Ringing after a short delay in a timer logic
         if (send_180_ring_response(worker->server_socket, request) != 0)
         {
             printf("Failed to send 180 Ringing response\n");
@@ -134,6 +156,22 @@ void process_invite_request(worker_thread_t *worker, sip_message_t *request)
             send_sip_error_response(request, 500, "Internal Server Error");
             return;
         }
+
+        new_call->state = SIP_CALL_STATE_RINGING;
+
+        // build and send 200 OK response here
+        // TODO to simulate call setup delay, send 200 OK after a short delay in a timer logic
+        if (send_sip_200_ok_response(worker->server_socket, request) != 0)
+        {
+            printf("Failed to send 200 OK response\n");
+            delete_call(&worker->calls, request->call_id, request->call_id_length);
+            send_sip_error_response(request, 500, "Internal Server Error");
+            return;
+        }
+
+        new_call->state = SIP_CALL_STATE_ESTABLISHED;
+        dialog->state = SIP_DIALOG_STATE_CONFIRMED;
+        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
     }
     else
     {
