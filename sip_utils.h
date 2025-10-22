@@ -9,6 +9,9 @@
 #include <stddef.h>
 #include "sip_message.h"
 
+#define MAX_DIALOGS_PER_CALL 16
+#define MAX_TXNS_PER_DIALOG 32
+
 typedef enum
 {
     SIP_TRANSACTION_STATE_NONE = 0,
@@ -54,7 +57,7 @@ struct sip_transaction_s
 struct sip_dialog_s
 {
     struct sip_dialog_s *next;
-    sip_transaction_t *transaction;
+    sip_transaction_t *transaction[MAX_TXNS_PER_DIALOG];
     //
     sip_call_t *call;
     sip_dialog_state_t state;
@@ -67,7 +70,7 @@ struct sip_dialog_s
 struct sip_call_s
 {
     struct sip_call_s *next;
-    sip_dialog_t *dialog;
+    sip_dialog_t *dialog[MAX_DIALOGS_PER_CALL];
     //
     sip_call_state_t state;
     char call_id[SIP_CALL_ID_MAX_LENGTH + 1];
@@ -76,23 +79,27 @@ struct sip_call_s
 
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length);
 sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call_id_length);
-void delete_call(sip_call_t **calls, const char *call_id, size_t call_id_length);
-// TODO delete call by pointer
+void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_length);
+void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call);
 void cleanup_call(sip_call_t *call);
 void delete_all_calls(sip_call_t **calls);
+void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog);
+void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog);
 
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length);
-void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
-// TODO delete dialog by pointer
+void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
+void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog);
 void cleanup_dialog(sip_dialog_t *dialog);
 void delete_all_dialogs(sip_dialog_t **dialogs);
 void create_to_tag(char *to_tag_buffer, size_t buffer_size);
+void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
+void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 
 sip_transaction_t *find_transaction_by_branch(sip_transaction_t *transactions, const char *branch, size_t branch_length);
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
-void delete_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
-// TODO delete transaction by pointer
+void delete_transaction_by_id(sip_transaction_t **transactions, const char *branch, size_t branch_length);
+void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transaction_t *transaction);
 void cleanup_transaction(sip_transaction_t *transaction);
 void delete_all_transactions(sip_transaction_t **transactions);
 

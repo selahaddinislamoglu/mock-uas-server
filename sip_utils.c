@@ -38,7 +38,7 @@ void cleanup_call(sip_call_t *call)
     free(call);
 }
 
-void delete_call(sip_call_t **calls, const char *call_id, size_t call_id_length)
+void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_length)
 {
     sip_call_t *current = *calls;
     sip_call_t *previous = NULL;
@@ -47,6 +47,31 @@ void delete_call(sip_call_t **calls, const char *call_id, size_t call_id_length)
     {
         if (current->call_id_length == call_id_length &&
             strncmp(current->call_id, call_id, call_id_length) == 0)
+        {
+            if (previous == NULL)
+            {
+                *calls = current->next;
+            }
+            else
+            {
+                previous->next = current->next;
+            }
+            cleanup_call(current);
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+}
+
+void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call)
+{
+    sip_call_t *current = *calls;
+    sip_call_t *previous = NULL;
+
+    while (current != NULL)
+    {
+        if (current == call)
         {
             if (previous == NULL)
             {
@@ -76,6 +101,31 @@ void delete_all_calls(sip_call_t **calls)
         current = next;
     }
     *calls = NULL;
+}
+
+void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
+{ // TODO boundary check
+    for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
+    {
+        if (call->dialog[i] == NULL)
+        {
+            call->dialog[i] = dialog;
+            return;
+        }
+    }
+}
+
+void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
+{
+    // TODO boundary check
+    for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
+    {
+        if (call->dialog[i] == dialog)
+        {
+            call->dialog[i] = NULL;
+            return;
+        }
+    }
 }
 
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
@@ -127,12 +177,16 @@ sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, si
 
 void cleanup_dialog(sip_dialog_t *dialog)
 {
+    if (dialog->call != NULL)
+    {
+        remove_dialog_from_call(dialog->call, dialog);
+    }
     free(dialog);
 }
 
-void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
+void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
-    sip_dialog_t *current = dialogs;
+    sip_dialog_t *current = *dialogs;
     sip_dialog_t *previous = NULL;
 
     while (current != NULL)
@@ -145,7 +199,7 @@ void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_
             {
                 if (previous == NULL)
                 {
-                    dialogs = current->next;
+                    *dialogs = current->next;
                 }
                 else
                 {
@@ -157,6 +211,56 @@ void delete_dialog(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_
         }
         previous = current;
         current = current->next;
+    }
+}
+
+void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
+{
+    sip_dialog_t *current = *dialogs;
+    sip_dialog_t *previous = NULL;
+
+    while (current != NULL)
+    {
+        if (current == dialog)
+        {
+            if (previous == NULL)
+            {
+                *dialogs = current->next;
+            }
+            else
+            {
+                previous->next = current->next;
+            }
+            cleanup_dialog(current);
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+}
+
+void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
+{ // TODO boundary check
+    for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
+    {
+        if (dialog->transaction[i] == NULL)
+        {
+            dialog->transaction[i] = transaction;
+            return;
+        }
+    }
+}
+
+void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
+{
+    // TODO boundary check
+    for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
+    {
+        if (dialog->transaction[i] == transaction)
+        {
+            dialog->transaction[i] = NULL;
+            return;
+        }
     }
 }
 
@@ -205,11 +309,15 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
 
 void cleanup_transaction(sip_transaction_t *transaction)
 {
+    if (transaction->dialog != NULL)
+    {
+        remove_transaction_from_dialog(transaction->dialog, transaction);
+    }
     cleanup_sip_message(transaction->message);
     free(transaction);
 }
 
-void delete_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length)
+void delete_transaction_by_id(sip_transaction_t **transactions, const char *branch, size_t branch_length)
 {
     sip_transaction_t *current = *transactions;
     sip_transaction_t *previous = NULL;
@@ -218,6 +326,31 @@ void delete_transaction(sip_transaction_t **transactions, const char *branch, si
     {
         if (current->branch_length == branch_length &&
             strncmp(current->branch, branch, branch_length) == 0)
+        {
+            if (previous == NULL)
+            {
+                *transactions = current->next;
+            }
+            else
+            {
+                previous->next = current->next;
+            }
+            cleanup_transaction(current);
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+}
+
+void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transaction_t *transaction)
+{
+    sip_transaction_t *current = *transactions;
+    sip_transaction_t *previous = NULL;
+
+    while (current != NULL)
+    {
+        if (current == transaction)
         {
             if (previous == NULL)
             {

@@ -9,11 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void send_sip_error_response(sip_message_t *request, int status_code, const char *reason)
-{
-    printf("Sending SIP error response: %d %s\n", status_code, reason);
-}
-
 int send_message(int server_socket, char *message, size_t message_length, struct sockaddr_in *client_addr, socklen_t client_addr_len)
 {
     // TODO maybe use dedicated sender thread
@@ -27,48 +22,20 @@ int send_message(int server_socket, char *message, size_t message_length, struct
     return 0;
 }
 
-int send_100_trying_response(int server_socket, sip_message_t *request)
+void send_sip_error_response(int server_socket, sip_message_t *request, const char *status_code, const char *reason)
 {
-    printf("Sending 100 Trying response\n");
+    printf("Sending SIP error response: %s %s\n", status_code, reason);
 
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_100 " " RESPONSE_TEXT_TRYING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %s %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
+                                        status_code, reason,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
-    return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-}
-
-int send_180_ring_response(int server_socket, sip_message_t *request)
-{
-    printf("Sending 180 Ringing response\n");
-    request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_180 " " RESPONSE_TEXT_RINGING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;tag=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
-                                                                 "\r\n",
-                                        (int)request->via_length, request->via,
-                                        (int)request->from_length, request->from,
-                                        (int)request->to_length, request->to,
-                                        (int)request->to_tag_length, request->to_tag,
-                                        (int)request->call_id_length, request->call_id,
-                                        (int)request->cseq_length, request->cseq);
-    return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
-}
-
-int send_sip_200_ok_response(int server_socket, sip_message_t *request)
-{
-    printf("Sending 200 OK response\n");
-    request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " " RESPONSE_CODE_200 " " RESPONSE_TEXT_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
-                                                                 "\r\n",
-                                        (int)request->via_length, request->via,
-                                        (int)request->from_length, request->from,
-                                        (int)request->to_length, request->to,
-                                        (int)request->call_id_length, request->call_id,
-                                        (int)request->cseq_length, request->cseq);
-    return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
+    send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
 }
 
 int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, const char *status_code, const char *reason)
@@ -209,7 +176,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to send 100 Trying response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction(&worker->transactions, request->branch, request->branch_length); // TODO must be done after transaction timeout
+            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
             return;
         }
 
@@ -218,11 +185,11 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to create new SIP dialog\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_transaction(&worker->transactions, request->branch, request->branch_length); // TODO must be done after transaction timeout
+            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
             return;
         }
 
-        dialog->transaction = transaction;
+        add_transaction_to_dialog(dialog, transaction);
         dialog->state = SIP_DIALOG_STATE_EARLY;
         transaction->dialog = dialog;
 
@@ -232,21 +199,21 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to create new SIP call\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_dialog(worker->dialogs, request->from_tag, request->from_tag_length, NULL, 0); // TODO must be done after dialog timeout
-            delete_transaction(&worker->transactions, request->branch, request->branch_length);   // TODO must be done after transaction timeout
+            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
             return;
         }
 
+        add_dialog_to_call(call, dialog);
         call->state = SIP_CALL_STATE_INCOMING;
-        call->dialog = dialog;
 
         if (send_180_ring_response_over_transaction(worker->server_socket, transaction) != 0)
         {
             printf("Failed to send 180 Ringing response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_call(&worker->calls, request->call_id, request->call_id_length);               // TODO must be done after call timeout
-            delete_dialog(worker->dialogs, request->from_tag, request->from_tag_length, NULL, 0); // TODO must be done after dialog timeout
-            delete_transaction(&worker->transactions, request->branch, request->branch_length);   // TODO must be done after transaction timeout
+            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
+            delete_call_by_pointer(&worker->calls, call);                      // TODO must be done after call timeout
             return;
         }
 
@@ -256,9 +223,9 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             printf("Failed to send 200 OK response\n");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
-            delete_call(&worker->calls, request->call_id, request->call_id_length);               // TODO must be done after call timeout
-            delete_dialog(worker->dialogs, request->from_tag, request->from_tag_length, NULL, 0); // TODO must be done after dialog timeout
-            delete_transaction(&worker->transactions, request->branch, request->branch_length);   // TODO must be done after transaction timeout
+            delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
+            delete_dialog_by_pointer(&worker->dialogs, dialog);                // TODO must be done after dialog timeout
+            delete_call_by_pointer(&worker->calls, call);                      // TODO must be done after call timeout
             return;
         }
         transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
@@ -319,7 +286,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         if (transaction == NULL)
         {
             printf("Failed to create new SIP transaction\n");
-            send_sip_error_response(message, 500 /*TODO*/, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
+            send_sip_error_response(worker->server_socket, message, RESPONSE_CODE_500, RESPONSE_TEXT_INTERNAL_SERVER_ERROR);
             cleanup_sip_message(message);
             return;
         }
@@ -341,7 +308,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         // TODO other methods
         printf("Unsupported SIP method: %s\n", message->method);
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_NOT_IMPLEMENTED);
-        delete_transaction(&worker->transactions, message->branch, message->branch_length); // TODO must be done after transaction timeout
+        delete_transaction_by_pointer(&worker->transactions, transaction); // TODO must be done after transaction timeout
     }
 }
 
