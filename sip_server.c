@@ -22,6 +22,11 @@
  */
 int send_message(int server_socket, char *message, size_t message_length, struct sockaddr_in *client_addr, socklen_t client_addr_len)
 {
+    if (server_socket < 0 || message == NULL || message_length == 0 || client_addr == NULL || client_addr_len == 0)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
     // TODO maybe use dedicated sender thread
     log("Outgoing SIP message:\n<<<<<<<<<<<<<<<<<<<<<<<<<\n%.*s<<<<<<<<<<<<<<<<<<<<<<<<<\n", (int)message_length, message);
 
@@ -44,6 +49,11 @@ int send_message(int server_socket, char *message, size_t message_length, struct
  */
 void send_sip_error_response(int server_socket, sip_message_t *request, int status_code, const char *reason)
 {
+    if (server_socket < 0 || request == NULL || reason == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Sending SIP error response: %d %s", status_code, reason);
 
     request->response_length = snprintf(request->response, sizeof(request->response),
@@ -68,6 +78,12 @@ void send_sip_error_response(int server_socket, sip_message_t *request, int stat
  */
 int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, int status_code, const char *reason)
 {
+    if (server_socket < 0 || transaction == NULL || reason == NULL)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
+    // TODO set dialog state on error
     log("Sending SIP error response over transaction: %d %s", status_code, reason);
     sip_message_t *request = transaction->message;
     if (request == NULL)
@@ -99,6 +115,11 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
  */
 int send_100_trying_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
+    if (server_socket < 0 || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
     log("Sending 100 Trying response over transaction");
 
     sip_message_t *request = transaction->message;
@@ -131,6 +152,11 @@ int send_100_trying_response_over_transaction(int server_socket, sip_transaction
  */
 int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
+    if (server_socket < 0 || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
     log("Sending 180 Ringing response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
@@ -163,6 +189,11 @@ int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t
  */
 int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
+    if (server_socket < 0 || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
     log("Sending 200 OK response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
@@ -195,6 +226,11 @@ int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction
  */
 int send_last_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
+    if (server_socket < 0 || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return -1;
+    }
     // TODO, do we need to update client address info from via header?
     log("Resending last response over transaction");
     sip_message_t *request = transaction->message;
@@ -216,6 +252,8 @@ int send_last_response_over_transaction(int server_socket, sip_transaction_t *tr
  */
 int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
 {
+    if (a == NULL || b == NULL)
+        return -1;
     if (a->sin_family != b->sin_family)
         return -1;
     if (a->sin_port != b->sin_port)
@@ -233,6 +271,11 @@ int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
  */
 void process_invite_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
+    if (worker == NULL || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Processing SIP INVITE request");
     sip_message_t *request = transaction->message;
 
@@ -309,6 +352,11 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
  */
 void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
+    if (worker == NULL || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Processing SIP ACK request");
 
     if (transaction->state == SIP_TRANSACTION_STATE_COMPLETED && transaction->message->method_type == INVITE && transaction->ack_message != NULL && transaction->ack_message->method_type == ACK)
@@ -341,6 +389,11 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
  */
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
+    if (worker == NULL || transaction == NULL || transaction->message == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Processing SIP BYE request");
 
     if (transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
@@ -366,6 +419,11 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
  */
 void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 {
+    if (worker == NULL || message == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
     if (transaction == NULL)
     {
@@ -445,6 +503,11 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
  */
 void process_sip_response(worker_thread_t *worker, sip_message_t *message)
 {
+    if (worker == NULL || message == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
     if (transaction == NULL)
     {
@@ -463,6 +526,11 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
  */
 void *process_sip_messages(void *arg)
 {
+    if (arg == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     worker_thread_t *worker = (worker_thread_t *)arg;
     message_queue_t *queue = &worker->queue;
     sip_message_t *message;

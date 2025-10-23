@@ -1,4 +1,5 @@
 #include "message_queue.h"
+#include "log.h"
 #include <stdlib.h>
 
 /**
@@ -8,6 +9,15 @@
  */
 void initialize_message_queue(message_queue_t *queue, int capacity)
 {
+    if (queue == NULL)
+    {
+        error("Message queue is null");
+        return;
+    }
+    if (capacity <= 0)
+    {
+        capacity = 1;
+    }
     queue->messages = malloc(sizeof(sip_message_t *) * capacity);
     queue->capacity = capacity;
     queue->size = 0;
@@ -23,6 +33,11 @@ void initialize_message_queue(message_queue_t *queue, int capacity)
  */
 void destroy_message_queue(message_queue_t *queue)
 {
+    if (queue == NULL)
+    {
+        error("Message queue is null");
+        return;
+    }
     for (int i = 0; i < queue->size; i++)
     {
         free(queue->messages[(queue->front + i) % queue->capacity]);
@@ -40,6 +55,11 @@ void destroy_message_queue(message_queue_t *queue)
  */
 int enqueue_message(message_queue_t *queue, sip_message_t *message)
 {
+    if (queue == NULL || message == NULL)
+    {
+        error("Invalid parameters");
+        return 0;
+    }
     pthread_mutex_lock(&queue->mutex);
     if (queue->size == queue->capacity)
     {
@@ -64,6 +84,11 @@ int enqueue_message(message_queue_t *queue, sip_message_t *message)
  */
 int dequeue_message(message_queue_t *queue, sip_message_t **message)
 {
+    if (queue == NULL || message == NULL)
+    {
+        error("Invalid parameters");
+        return 0;
+    }
     pthread_mutex_lock(&queue->mutex);
 
     while (queue->size == 0)

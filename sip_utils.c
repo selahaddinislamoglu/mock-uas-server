@@ -17,6 +17,11 @@ const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSAC
  */
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length)
 {
+    if (calls == NULL || call_id == NULL || call_id_length == 0)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_call_t *current = calls;
     while (current != NULL)
     {
@@ -39,6 +44,11 @@ sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_
  */
 sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call_id_length)
 {
+    if (calls == NULL || call_id == NULL || call_id_length == 0)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_call_t *new_call = (sip_call_t *)malloc(sizeof(sip_call_t));
     if (new_call == NULL)
     {
@@ -58,6 +68,11 @@ sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call
  */
 void cleanup_call(sip_call_t *call)
 {
+    if (call == NULL)
+    {
+        log("Call is NULL");
+        return;
+    }
     free(call);
 }
 
@@ -69,6 +84,12 @@ void cleanup_call(sip_call_t *call)
  */
 void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_length)
 {
+    if (calls == NULL || call_id == NULL || call_id_length == 0)
+    {
+        error("Invalid parameters");
+        return;
+    }
+
     sip_call_t *current = *calls;
     sip_call_t *previous = NULL;
 
@@ -100,6 +121,12 @@ void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_l
  */
 void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call)
 {
+    if (calls == NULL || call == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
+
     sip_call_t *current = *calls;
     sip_call_t *previous = NULL;
 
@@ -129,6 +156,11 @@ void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call)
  */
 void delete_all_calls(sip_call_t **calls)
 {
+    if (calls == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_call_t *current = *calls;
     sip_call_t *next;
 
@@ -148,6 +180,12 @@ void delete_all_calls(sip_call_t **calls)
  */
 void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
 { // TODO boundary check
+
+    if (call == NULL || dialog == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     int reserved = -1;
     for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
     {
@@ -174,6 +212,11 @@ void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
  */
 void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
 {
+    if (call == NULL || dialog == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     // TODO boundary check
     for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
     {
@@ -192,6 +235,11 @@ void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
  */
 void set_call_state(sip_call_t *call, sip_call_state_t state)
 {
+    if (call == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Setting call state from %s to %s id %.*s", call_states[call->state], call_states[state], (int)call->call_id_length, call->call_id);
     call->state = state;
 }
@@ -207,6 +255,11 @@ void set_call_state(sip_call_t *call, sip_call_state_t state)
  */
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
+    if (dialogs == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_dialog_t *current = dialogs;
     while (current != NULL)
     {
@@ -231,6 +284,11 @@ sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, siz
  */
 void create_to_tag(char *to_tag_buffer, size_t buffer_size)
 {
+    if (to_tag_buffer == NULL || buffer_size == 0)
+    {
+        error("Invalid parameters");
+        return;
+    }
     char c;
     size_t i;
     for (i = 0; i < buffer_size; i++)
@@ -249,6 +307,11 @@ void create_to_tag(char *to_tag_buffer, size_t buffer_size)
  */
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length)
 {
+    if (dialogs == NULL || from_tag == NULL || from_tag_length == 0)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_dialog_t *new_dialog = (sip_dialog_t *)malloc(sizeof(sip_dialog_t));
     if (new_dialog == NULL)
     {
@@ -270,6 +333,11 @@ sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, si
  */
 void cleanup_dialog(sip_dialog_t *dialog)
 {
+    if (dialog == NULL)
+    {
+        log("Dialog is NULL");
+        return;
+    }
     if (dialog->call != NULL)
     {
         remove_dialog_from_call(dialog->call, dialog);
@@ -287,6 +355,11 @@ void cleanup_dialog(sip_dialog_t *dialog)
  */
 void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
+    if (dialogs == NULL || from_tag == NULL || from_tag_length == 0)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_dialog_t *current = *dialogs;
     sip_dialog_t *previous = NULL;
 
@@ -322,6 +395,11 @@ void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t fr
  */
 void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
 {
+    if (dialogs == NULL || dialog == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_dialog_t *current = *dialogs;
     sip_dialog_t *previous = NULL;
 
@@ -352,6 +430,11 @@ void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
  */
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
 {
+    if (dialog == NULL || transaction == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     // TODO boundary check
     int reserved = -1;
     for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
@@ -379,6 +462,11 @@ void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transact
  */
 void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
 {
+    if (dialog == NULL || transaction == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     // TODO boundary check
     for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
     {
@@ -397,6 +485,11 @@ void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *tra
  */
 void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
 {
+    if (dialog == NULL || call == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     dialog->call = call;
     add_dialog_to_call(call, dialog);
 }
@@ -408,7 +501,11 @@ void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
  */
 void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
 {
-
+    if (dialog == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Setting dialog state from %s to %s id %.*s %.*s", dialog_states[dialog->state], dialog_states[state], (int)dialog->from_tag_length, dialog->from_tag, (int)dialog->to_tag_length, dialog->to_tag);
     dialog->state = state;
 }
@@ -419,6 +516,11 @@ void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
  */
 void delete_all_dialogs(sip_dialog_t **dialogs)
 {
+    if (dialogs == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_dialog_t *current = *dialogs;
     sip_dialog_t *next;
 
@@ -440,6 +542,11 @@ void delete_all_dialogs(sip_dialog_t **dialogs)
  */
 sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length)
 {
+    if (transactions == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_transaction_t *current = transactions;
     while (current != NULL)
     {
@@ -462,6 +569,11 @@ sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const
  */
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length)
 {
+    if (transactions == NULL || branch == NULL || branch_length == 0)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     sip_transaction_t *new_transaction = (sip_transaction_t *)malloc(sizeof(sip_transaction_t));
     if (new_transaction == NULL)
     {
@@ -481,6 +593,11 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
  */
 void cleanup_transaction(sip_transaction_t *transaction)
 {
+    if (transaction == NULL)
+    {
+        log("Transaction is NULL");
+        return;
+    }
     if (transaction->dialog != NULL)
     {
         remove_transaction_from_dialog(transaction->dialog, transaction);
@@ -497,6 +614,11 @@ void cleanup_transaction(sip_transaction_t *transaction)
  */
 void delete_transaction_by_id(sip_transaction_t **transactions, const char *branch, size_t branch_length)
 {
+    if (transactions == NULL || branch == NULL || branch_length == 0)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_transaction_t *current = *transactions;
     sip_transaction_t *previous = NULL;
 
@@ -528,6 +650,11 @@ void delete_transaction_by_id(sip_transaction_t **transactions, const char *bran
  */
 void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transaction_t *transaction)
 {
+    if (transactions == NULL || transaction == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_transaction_t *current = *transactions;
     sip_transaction_t *previous = NULL;
 
@@ -557,6 +684,11 @@ void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transac
  */
 void delete_all_transactions(sip_transaction_t **transactions)
 {
+    if (transactions == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     sip_transaction_t *current = *transactions;
     sip_transaction_t *next;
 
@@ -576,6 +708,11 @@ void delete_all_transactions(sip_transaction_t **transactions)
  */
 void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog)
 {
+    if (transaction == NULL || dialog == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     transaction->dialog = dialog;
     add_transaction_to_dialog(dialog, transaction);
 }
@@ -587,6 +724,11 @@ void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog
  */
 void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state)
 {
+    if (transaction == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
     log("Setting transaction state from %s to %s id %.*s", transaction_states[transaction->state], transaction_states[state], (int)transaction->branch_length, transaction->branch);
     transaction->state = state;
 }

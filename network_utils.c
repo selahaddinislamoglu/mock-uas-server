@@ -25,6 +25,12 @@ void send_sip_message(const sip_message_t *message, const char *destination, int
     int sockfd;
     struct sockaddr_in dest_addr;
 
+    if (message == NULL || destination == NULL || port <= 0)
+    {
+        error("Invalid parameters");
+        return;
+    }
+
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
     {

@@ -18,8 +18,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define MAX_THREADS 5
-#define QUEUE_CAPACITY 10
+#define MAX_THREADS 8
+#define QUEUE_CAPACITY 1024
 #define SIP_PORT 5060
 
 worker_thread_t worker_threads[MAX_THREADS];

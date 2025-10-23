@@ -17,6 +17,10 @@ void cleanup_sip_message(sip_message_t *message)
     {
         free(message);
     }
+    else
+    {
+        log("Message is NULL");
+    }
 }
 
 /**
@@ -28,6 +32,11 @@ void cleanup_sip_message(sip_message_t *message)
  */
 const char *get_header_value(const char *buffer, const char *header_name, size_t *length)
 {
+    if (buffer == NULL || header_name == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     size_t header_name_len = strlen(header_name);
     const char *line_start = buffer;
     const char *line_end;
@@ -61,6 +70,11 @@ const char *get_header_value(const char *buffer, const char *header_name, size_t
  */
 const char *get_message_call_id(sip_message_t *message, size_t *length)
 {
+    if (message == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     if (message->call_id_length > 0 && message->call_id != NULL)
     {
         *length = message->call_id_length;
@@ -84,6 +98,11 @@ const char *get_message_call_id(sip_message_t *message, size_t *length)
  */
 const char *get_message_from(sip_message_t *message, size_t *length)
 {
+    if (message == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     if (message->from_length > 0 && message->from != NULL)
     {
         *length = message->from_length;
@@ -107,6 +126,11 @@ const char *get_message_from(sip_message_t *message, size_t *length)
  */
 const char *get_message_to(sip_message_t *message, size_t *length)
 {
+    if (message == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     if (message->to_length > 0 && message->to != NULL)
     {
         *length = message->to_length;
@@ -130,6 +154,11 @@ const char *get_message_to(sip_message_t *message, size_t *length)
  */
 const char *get_message_via(sip_message_t *message, size_t *length)
 {
+    if (message == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     if (message->via_length > 0 && message->via != NULL)
     {
         *length = message->via_length;
@@ -153,6 +182,11 @@ const char *get_message_via(sip_message_t *message, size_t *length)
  */
 const char *get_message_cseq(sip_message_t *message, size_t *length)
 {
+    if (message == NULL || length == NULL)
+    {
+        error("Invalid parameters");
+        return NULL;
+    }
     if (message->cseq_length > 0 && message->cseq != NULL)
     {
         *length = message->cseq_length;
@@ -175,6 +209,11 @@ const char *get_message_cseq(sip_message_t *message, size_t *length)
  */
 sip_msg_error_t parse_first_line(sip_message_t *message)
 {
+    if (message == NULL)
+    {
+        error("Invalid parameters");
+        return ERROR_INVALID_PARAMETERS;
+    }
     const char *line_end = strstr(message->buffer, CRLF);
     if (line_end == NULL)
     {
@@ -291,6 +330,7 @@ const char *get_from_tag(sip_message_t *message, size_t *length)
 {
     if (message->from == NULL || message->from_length == 0)
     {
+        error("Invalid parameters");
         return NULL;
     }
     const char *tag_start = strchr(message->from, ';');
@@ -325,6 +365,7 @@ const char *get_to_tag(sip_message_t *message, size_t *length)
 {
     if (message->to == NULL || message->to_length == 0)
     {
+        error("Invalid parameters");
         return NULL;
     }
     const char *tag_start = strchr(message->to, ';');
@@ -359,6 +400,7 @@ const char *get_branch_param(sip_message_t *message, size_t *length)
 {
     if (message->via == NULL || message->via_length == 0)
     {
+        error("Invalid parameters");
         return NULL;
     }
     const char *branch_start = strchr(message->via, ';');
@@ -393,6 +435,11 @@ sip_msg_error_t parse_message(sip_message_t *message)
     const char *header;
     size_t length;
 
+    if (message == NULL)
+    {
+        error("Invalid parameters");
+        return ERROR_INVALID_PARAMETERS;
+    }
     // Parse first line
     sip_msg_error_t err = parse_first_line(message);
     if (err != ERROR_NONE)
@@ -490,6 +537,11 @@ sip_msg_error_t parse_message(sip_message_t *message)
  */
 sip_method_t get_message_method(sip_message_t *message)
 {
+    if (message == NULL)
+    {
+        error("Invalid parameters");
+        return UNKNOWN;
+    }
     if (!message->is_request)
     {
         return UNKNOWN;
