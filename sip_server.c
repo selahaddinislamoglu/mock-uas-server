@@ -11,6 +11,15 @@
 #include <string.h>
 #include <errno.h>
 
+/**
+ * @brief Sends a SIP message to a specified destination and port.
+ *
+ * @param server_socket The socket to send the message on.
+ * @param message The SIP message to be sent.
+ * @param message_length The length of the SIP message.
+ * @param client_addr The address of the client to send the message to.
+ * @param client_addr_len The length of the client address structure.
+ */
 int send_message(int server_socket, char *message, size_t message_length, struct sockaddr_in *client_addr, socklen_t client_addr_len)
 {
     // TODO maybe use dedicated sender thread
@@ -25,6 +34,14 @@ int send_message(int server_socket, char *message, size_t message_length, struct
     return 0;
 }
 
+/**
+ * @brief Sends a SIP error response.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param request The request message that triggered the error response.
+ * @param status_code The status code of the error response.
+ * @param reason The reason for the error response.
+ */
 void send_sip_error_response(int server_socket, sip_message_t *request, int status_code, const char *reason)
 {
     log("Sending SIP error response: %d %s", status_code, reason);
@@ -41,6 +58,14 @@ void send_sip_error_response(int server_socket, sip_message_t *request, int stat
     send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
 }
 
+/**
+ * @brief Sends a SIP error response over a transaction.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param transaction The transaction to send the response for.
+ * @param status_code The status code of the error response.
+ * @param reason The reason for the error response.
+ */
 int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, int status_code, const char *reason)
 {
     log("Sending SIP error response over transaction: %d %s", status_code, reason);
@@ -65,6 +90,13 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
     // TODO retransmit
 }
 
+/**
+ * @brief Sends a 100 Trying response over a transaction.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param transaction The transaction to send the response for.
+ * @return 0 on success, -1 on failure.
+ */
 int send_100_trying_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
     log("Sending 100 Trying response over transaction");
@@ -90,6 +122,13 @@ int send_100_trying_response_over_transaction(int server_socket, sip_transaction
     // TODO retransmit
 }
 
+/**
+ * @brief Sends a 180 Ringing response over a transaction.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param transaction The transaction to send the response for.
+ * @return 0 on success, -1 on failure.
+ */
 int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
     log("Sending 180 Ringing response over transaction");
@@ -115,6 +154,13 @@ int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t
     // TODO retransmit
 }
 
+/**
+ * @brief Sends a 200 OK response over a transaction.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param transaction The transaction to send the response for.
+ * @return 0 on success, -1 on failure.
+ */
 int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
     log("Sending 200 OK response over transaction");
@@ -140,9 +186,16 @@ int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction
     // TODO retransmit
 }
 
-// TODO, do we need to update client address info from via header?
+/**
+ * @brief Sends the last response over a transaction.
+ *
+ * @param server_socket The socket to send the response on.
+ * @param transaction The transaction to send the response for.
+ * @return 0 on success, -1 on failure.
+ */
 int send_last_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
+    // TODO, do we need to update client address info from via header?
     log("Resending last response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
@@ -154,6 +207,13 @@ int send_last_response_over_transaction(int server_socket, sip_transaction_t *tr
     // TODO retransmit
 }
 
+/**
+ * @brief Checks if two sockaddr_in structures are equal.
+ *
+ * @param a Pointer to the first sockaddr_in structure.
+ * @param b Pointer to the second sockaddr_in structure.
+ * @return 0 if the structures are equal, -1 otherwise.
+ */
 int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
 {
     if (a->sin_family != b->sin_family)
@@ -165,6 +225,12 @@ int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
     return 0;
 }
 
+/**
+ * @brief Processes a SIP INVITE request.
+ *
+ * @param worker The SIP server worker thread.
+ * @param transaction The SIP transaction associated with the request.
+ */
 void process_invite_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
     log("Processing SIP INVITE request");
@@ -235,6 +301,12 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
     }
 }
 
+/**
+ * @brief Processes a SIP ACK request.
+ *
+ * @param worker The SIP server worker thread.
+ * @param transaction The SIP transaction associated with the request.
+ */
 void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
     log("Processing SIP ACK request");
@@ -261,6 +333,12 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
     set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
 }
 
+/**
+ * @brief Processes a SIP BYE request.
+ *
+ * @param worker The SIP server worker thread.
+ * @param transaction The SIP transaction associated with the request.
+ */
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
     log("Processing SIP BYE request");
@@ -280,6 +358,12 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
     // TODO resource cleanup
 }
 
+/**
+ * @brief Processes a SIP request message.
+ *
+ * @param worker The SIP server worker thread.
+ * @param message The SIP message to process.
+ */
 void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 {
     sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
@@ -353,48 +437,12 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
     }
 }
 
-void process_provisional_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP provisional response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
-void process_successful_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP successful response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
-void process_redirection_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP redirection response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
-void process_client_error_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP client error response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
-void process_server_error_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP server error response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
-void process_global_failure_response(worker_thread_t *worker, sip_message_t *message)
-{
-    log("Processing SIP global failure response");
-    // TODO
-    cleanup_sip_message(message);
-}
-
+/**
+ * @brief Processes a SIP response message.
+ *
+ * @param worker The SIP server worker thread.
+ * @param message The SIP message to process.
+ */
 void process_sip_response(worker_thread_t *worker, sip_message_t *message)
 {
     sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
@@ -404,40 +452,12 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
         cleanup_sip_message(message);
         return;
     }
-
-    if (message->status_code >= RESPONSE_CODE_PROVISIONAL_START && message->status_code <= RESPONSE_CODE_PROVISIONAL_END)
-    {
-        return process_provisional_response(worker, message);
-    }
-    else if (message->status_code >= RESPONSE_CODE_SUCCESS_START && message->status_code <= RESPONSE_CODE_SUCCESS_END)
-    {
-        return process_successful_response(worker, message);
-    }
-    else if (message->status_code >= RESPONSE_CODE_REDIRECTION_START && message->status_code <= RESPONSE_CODE_REDIRECTION_END)
-    {
-        return process_redirection_response(worker, message);
-    }
-    else if (message->status_code >= RESPONSE_CODE_CLIENT_ERROR_START && message->status_code <= RESPONSE_CODE_CLIENT_ERROR_END)
-    {
-        return process_client_error_response(worker, message);
-    }
-    else if (message->status_code >= RESPONSE_CODE_SERVER_ERROR_START && message->status_code <= RESPONSE_CODE_SERVER_ERROR_END)
-    {
-        return process_server_error_response(worker, message);
-    }
-    else if (message->status_code >= RESPONSE_CODE_GLOBAL_FAILURE_START && message->status_code <= RESPONSE_CODE_GLOBAL_FAILURE_END)
-    {
-        return process_global_failure_response(worker, message);
-    }
-    else
-    {
-        error("Unknown SIP response status code: %d", message->status_code);
-        cleanup_sip_message(message);
-    }
+    // TODO
+    cleanup_sip_message(message);
 }
 
 /**
- * @brief Worker thread function to process SIP messages.
+ * @brief Worker thread function to process SIP messages. Parses and processes incoming SIP messages.
  * @param arg Pointer to the worker thread's message queue.
  * @return NULL
  */
