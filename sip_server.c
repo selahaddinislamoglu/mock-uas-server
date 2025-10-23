@@ -366,7 +366,7 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
         set_transaction_state(transaction, SIP_TRANSACTION_STATE_CONFIRMED);
         // TODO resource cleanup
     }
-    else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
+    else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog != NULL && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
         // ACK for successful INVITE
         log("ACK for successful INVITE");
@@ -396,6 +396,12 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
     }
     log("Processing SIP BYE request");
 
+    if (transaction->dialog == NULL || transaction->dialog->call == NULL)
+    {
+        send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_404, RESPONSE_TEXT_404_NOT_FOUND);
+        goto cleanup;
+    }
+
     if (transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
         set_call_state(transaction->dialog->call, SIP_CALL_STATE_TERMINATING);
@@ -407,6 +413,8 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
     {
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_403, RESPONSE_TEXT_403_FORBIDDEN);
     }
+
+cleanup:
     set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
     // TODO resource cleanup
 }
@@ -424,7 +432,8 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         error("Invalid parameters");
         return;
     }
-    sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
+
+    sip_transaction_t *transaction = worker->transactions ? find_transaction_by_id(worker->transactions, message->branch, message->branch_length) : NULL;
     if (transaction == NULL)
     {
         transaction = create_new_transaction(&worker->transactions, message->branch, message->branch_length);
@@ -471,7 +480,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 
     if (transaction->dialog == NULL)
     {
-        sip_dialog_t *dialog = find_dialog_by_id(worker->dialogs, message->from_tag, message->from_tag_length, message->to_tag, message->to_tag_length);
+        sip_dialog_t *dialog = worker->dialogs ? find_dialog_by_id(worker->dialogs, message->from_tag, message->from_tag_length, message->to_tag, message->to_tag_length) : NULL;
         if (dialog != NULL)
         {
             set_transaction_dialog(transaction, dialog);

@@ -255,7 +255,7 @@ void set_call_state(sip_call_t *call, sip_call_state_t state)
  */
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
-    if (dialogs == NULL)
+    if (dialogs == NULL || from_tag == NULL || from_tag_length == 0)
     {
         error("Invalid parameters");
         return NULL;
@@ -542,7 +542,7 @@ void delete_all_dialogs(sip_dialog_t **dialogs)
  */
 sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length)
 {
-    if (transactions == NULL)
+    if (transactions == NULL || branch == NULL || branch_length == 0)
     {
         error("Invalid parameters");
         return NULL;

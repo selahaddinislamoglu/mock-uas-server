@@ -121,6 +121,7 @@ typedef enum
 #define RESPONSE_TEXT_200_OK "OK"
 #define RESPONSE_TEXT_400_BAD_REQUEST "Bad Request"
 #define RESPONSE_TEXT_403_FORBIDDEN "Forbidden"
+#define RESPONSE_TEXT_404_NOT_FOUND "Not Found"
 #define RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR "Internal Server Error"
 #define RESPONSE_TEXT_501_NOT_IMPLEMENTED "Not Implemented"
 
