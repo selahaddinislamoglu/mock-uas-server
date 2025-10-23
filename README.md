@@ -1,4 +1,14 @@
-## MOCK UAS SERVER
+## MOCK UAS SIP SERVER
+
+This is a MOCK UAS SIP server that processes incoming SIP messages and maintains a record of ongoing calls and their associated transactions and dialogs. It can handle the basic call for success scenario, which includes INVITE, ACK and BYE messages. It can also handle retransmission, and detect if a transaction has an associated dialog.
+
+## Compile
+
+make CFLAGS="-DHIDE_LOGS"
+
+## Testing
+
+sipp -sn uac 127.0.0.1 -m 5000 -r 1000 -l 5000 -trace_err -trace_msg -trace_stat
 
 ## Message processing for basic call scenario
 

@@ -235,7 +235,11 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         message->version_major = atoi(dash_pos + 1);
         message->version_minor = atoi(dash_pos + 3);
 
-        // TODO version check
+        if (message->version_major != 2 || message->version_minor != 0)
+        {
+            error("Unsupported SIP version");
+            return ERROR_UNSUPPORTED_SIP_VERSION;
+        }
 
         const char *status_code_start = dash_pos + 4;
         while (status_code_start < line_end && *status_code_start == ' ')
@@ -282,7 +286,12 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         message->method = method;
         message->method_length = space_pos - method;
 
-        // TODO method check
+        sip_method_t method_type = get_message_method(message);
+        if (method_type == UNKNOWN)
+        {
+            error("Method is unknown");
+            return ERROR_UNKNOWN_METHOD;
+        }
 
         const char *sip_pos = space_pos + 1;
         while (sip_pos < line_end && *sip_pos == ' ')
@@ -314,7 +323,11 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         message->version_major = atoi(dash_pos + 1);
         message->version_minor = atoi(dash_pos + 3);
 
-        // TODO version check
+        if (message->version_major != 2 || message->version_minor != 0)
+        {
+            error("Unsupported SIP version");
+            return ERROR_UNSUPPORTED_SIP_VERSION;
+        }
 
         return ERROR_NONE;
     }

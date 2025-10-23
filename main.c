@@ -135,7 +135,6 @@ void handle_new_message(int server_socket)
             if (call_id == NULL)
             {
                 error("Received SIP message without Call-ID");
-                // TODO: send error response
                 free(message);
             }
             else
@@ -151,7 +150,6 @@ void handle_new_message(int server_socket)
                 if (!enqueue_message(&worker_threads[selected_thread].queue, message))
                 {
                     error("Failed to enqueue message");
-                    // TODO: send error response
                     free(message);
                 }
             }
