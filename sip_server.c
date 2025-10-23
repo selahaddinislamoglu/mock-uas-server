@@ -223,7 +223,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             return;
         }
         transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
-        dialog->state = SIP_TRANSACTION_STATE_COMPLETED;
+        dialog->state = SIP_TRANSACTION_STATE_CONFIRMED;
         call->state = SIP_CALL_STATE_ESTABLISHED;
     }
     else
@@ -247,16 +247,15 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
     {
         // ACK for successful INVITE
         printf("ACK for successful INVITE\n");
-        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
         // TODO resource cleanup
     }
     else
     {
         // ACK for other requests
-        printf("ACK for other requests\n");
-        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+        printf("unexpected ACK\n");
         // TODO resource cleanup
     }
+    transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
 }
 
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
@@ -268,12 +267,12 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
         send_sip_200_ok_response_over_transaction(worker->server_socket, transaction);
         transaction->dialog->call->state = SIP_CALL_STATE_TERMINATED;
         transaction->dialog->state = SIP_DIALOG_STATE_TERMINATED;
-        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
     }
     else
     {
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_403, RESPONSE_TEXT_403_FORBIDDEN);
     }
+    transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
     // TODO resource cleanup
 }
 
