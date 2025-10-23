@@ -178,7 +178,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             return;
         }
 
-        transaction->state = SIP_TRANSACTION_STATE_PROCEEDING;
+        set_transaction_state(transaction, SIP_TRANSACTION_STATE_PROCEEDING);
 
         sip_dialog_t *dialog = create_new_dialog(&worker->dialogs, request->from_tag, request->from_tag_length);
         if (dialog == NULL)
@@ -190,7 +190,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         }
 
         set_transaction_dialog(transaction, dialog);
-        dialog->state = SIP_DIALOG_STATE_EARLY;
+        set_dialog_state(dialog, SIP_DIALOG_STATE_EARLY);
 
         // TODO check if call exists, it would be re-INVITE
         sip_call_t *call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
@@ -203,7 +203,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         }
 
         set_dialog_call(dialog, call);
-        call->state = SIP_CALL_STATE_INCOMING;
+        set_call_state(call, SIP_CALL_STATE_INCOMING);
 
         if (send_180_ring_response_over_transaction(worker->server_socket, transaction) != 0)
         {
@@ -213,7 +213,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             return;
         }
 
-        call->state = SIP_CALL_STATE_RINGING;
+        set_call_state(call, SIP_CALL_STATE_RINGING);
         // TODO to simulate call setup delay, send 200 OK after a short delay in a timer logic
         if (send_sip_200_ok_response_over_transaction(worker->server_socket, transaction) != 0)
         {
@@ -222,9 +222,9 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             // TODO resource cleanup
             return;
         }
-        transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
-        dialog->state = SIP_TRANSACTION_STATE_CONFIRMED;
-        call->state = SIP_CALL_STATE_ESTABLISHED;
+        set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
+        set_dialog_state(dialog, SIP_DIALOG_STATE_CONFIRMED);
+        set_call_state(call, SIP_CALL_STATE_ESTABLISHED);
     }
     else
     {
@@ -236,11 +236,15 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
 {
     printf("Processing SIP ACK request\n");
 
+    printf("Transaction state: %d\n", transaction->state);
+    printf("Dialog state: %d\n", transaction->dialog->state);
+    printf("Call state: %d\n", transaction->dialog->call->state);
+
     if (transaction->state == SIP_TRANSACTION_STATE_COMPLETED && transaction->message->method_type == INVITE && transaction->ack_message != NULL && transaction->ack_message->method_type == ACK)
     {
         // ack for failed INVITE
         printf("ACK for failed INVITE\n");
-        transaction->state = SIP_TRANSACTION_STATE_CONFIRMED;
+        set_transaction_state(transaction, SIP_TRANSACTION_STATE_CONFIRMED);
         // TODO resource cleanup
     }
     else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
@@ -255,7 +259,7 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
         printf("unexpected ACK\n");
         // TODO resource cleanup
     }
-    transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+    set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
 }
 
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
@@ -264,15 +268,16 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
 
     if (transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
+        set_call_state(transaction->dialog->call, SIP_CALL_STATE_TERMINATING);
         send_sip_200_ok_response_over_transaction(worker->server_socket, transaction);
-        transaction->dialog->call->state = SIP_CALL_STATE_TERMINATED;
-        transaction->dialog->state = SIP_DIALOG_STATE_TERMINATED;
+        set_call_state(transaction->dialog->call, SIP_CALL_STATE_TERMINATED);
+        set_dialog_state(transaction->dialog, SIP_DIALOG_STATE_TERMINATED);
     }
     else
     {
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_403, RESPONSE_TEXT_403_FORBIDDEN);
     }
-    transaction->state = SIP_TRANSACTION_STATE_TERMINATED;
+    set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
     // TODO resource cleanup
 }
 

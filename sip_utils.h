@@ -12,6 +12,12 @@
 #define MAX_DIALOGS_PER_CALL 16
 #define MAX_TXNS_PER_DIALOG 32
 
+#define SIP_TRANSACTION_STATE_IDLE_TEXT "IDLE"
+#define SIP_TRANSACTION_STATE_PROCEEDING_TEXT "PROCEEDING"
+#define SIP_TRANSACTION_STATE_COMPLETED_TEXT "COMPLETED"
+#define SIP_TRANSACTION_STATE_CONFIRMED_TEXT "CONFIRMED"
+#define SIP_TRANSACTION_STATE_TERMINATED_TEXT "TERMINATED"
+
 typedef enum
 {
     SIP_TRANSACTION_STATE_IDLE = 0,
@@ -21,6 +27,11 @@ typedef enum
     SIP_TRANSACTION_STATE_TERMINATED
 } sip_transaction_state_t;
 
+#define SIP_DIALOG_STATE_IDLE_TEXT "IDLE"
+#define SIP_DIALOG_STATE_EARLY_TEXT "EARLY"
+#define SIP_DIALOG_STATE_CONFIRMED_TEXT "CONFIRMED"
+#define SIP_DIALOG_STATE_TERMINATED_TEXT "TERMINATED"
+
 typedef enum
 {
     SIP_DIALOG_STATE_IDLE = 0,
@@ -28,6 +39,14 @@ typedef enum
     SIP_DIALOG_STATE_CONFIRMED,
     SIP_DIALOG_STATE_TERMINATED
 } sip_dialog_state_t;
+
+#define SIP_CALL_STATE_IDLE_TEXT "IDLE"
+#define SIP_CALL_STATE_INCOMING_TEXT "INCOMING"
+#define SIP_CALL_STATE_RINGING_TEXT "RINGING"
+#define SIP_CALL_STATE_ESTABLISHED_TEXT "ESTABLISHED"
+#define SIP_CALL_STATE_FAILED_TEXT "FAILED"
+#define SIP_CALL_STATE_TERMINATING_TEXT "TERMINATING"
+#define SIP_CALL_STATE_TERMINATED_TEXT "TERMINATED"
 
 typedef enum
 {
@@ -88,6 +107,7 @@ void cleanup_call(sip_call_t *call);
 void delete_all_calls(sip_call_t **calls);
 void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog);
 void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog);
+void set_call_state(sip_call_t *call, sip_call_state_t state);
 
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length);
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length);
@@ -99,6 +119,7 @@ void create_to_tag(char *to_tag_buffer, size_t buffer_size);
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction);
 void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call);
+void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state);
 
 sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length);
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length);
@@ -107,5 +128,6 @@ void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transac
 void cleanup_transaction(sip_transaction_t *transaction);
 void delete_all_transactions(sip_transaction_t **transactions);
 void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog);
+void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state);
 
 #endif // SIP_UTILS_H

@@ -306,7 +306,8 @@ const char *get_branch_param(sip_message_t *message, size_t *length)
     {
         branch_start++;
     }
-    const char *branch_end = strchr(branch_start, ';');
+    branch_start += 7;
+    const char *branch_end = strchr(branch_start, '\r');
     if (branch_end == NULL)
     {
         branch_end = message->via + message->via_length;

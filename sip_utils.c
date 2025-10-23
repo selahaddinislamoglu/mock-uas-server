@@ -137,6 +137,13 @@ void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
     }
 }
 
+void set_call_state(sip_call_t *call, sip_call_state_t state)
+{
+    const char *call_states[] = {SIP_CALL_STATE_IDLE_TEXT, SIP_CALL_STATE_INCOMING_TEXT, SIP_CALL_STATE_RINGING_TEXT, SIP_CALL_STATE_ESTABLISHED_TEXT, SIP_CALL_STATE_FAILED_TEXT, SIP_CALL_STATE_TERMINATING_TEXT, SIP_CALL_STATE_TERMINATED_TEXT};
+    printf("Setting call state from %s to %s\n", call_states[call->state], call_states[state]);
+    call->state = state;
+}
+
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
     sip_dialog_t *current = dialogs;
@@ -289,6 +296,14 @@ void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
     add_dialog_to_call(call, dialog);
 }
 
+void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
+{
+    const char *dialog_states[] = {SIP_DIALOG_STATE_IDLE_TEXT, SIP_DIALOG_STATE_EARLY_TEXT, SIP_DIALOG_STATE_CONFIRMED_TEXT, SIP_DIALOG_STATE_TERMINATED_TEXT};
+
+    printf("Setting dialog state from %s to %s\n", dialog_states[dialog->state], dialog_states[state]);
+    dialog->state = state;
+}
+
 void delete_all_dialogs(sip_dialog_t **dialogs)
 {
     sip_dialog_t *current = *dialogs;
@@ -411,4 +426,11 @@ void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog
 {
     transaction->dialog = dialog;
     add_transaction_to_dialog(dialog, transaction);
+}
+
+void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state)
+{
+    const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_CONFIRMED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
+    printf("Setting transaction state from %s to %s\n", transaction_states[transaction->state], transaction_states[state]);
+    transaction->state = state;
 }
