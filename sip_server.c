@@ -5,18 +5,21 @@
 
 #include "sip_server.h"
 #include "sip_utils.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 int send_message(int server_socket, char *message, size_t message_length, struct sockaddr_in *client_addr, socklen_t client_addr_len)
 {
     // TODO maybe use dedicated sender thread
-    printf("Sending SIP message\n%s\n", message);
+    log("Outgoing SIP message:\n<<<<<<<<<<<<<<<<<<<<<<<<<\n%.*s<<<<<<<<<<<<<<<<<<<<<<<<<\n", (int)message_length, message);
+
     int rc = sendto(server_socket, message, message_length, 0, (struct sockaddr *)client_addr, client_addr_len);
     if (rc < 0)
     {
-        perror("Failed to send SIP message");
+        error("Failed to send SIP message: %s", strerror(errno));
         return -1;
     }
     return 0;
@@ -24,7 +27,7 @@ int send_message(int server_socket, char *message, size_t message_length, struct
 
 void send_sip_error_response(int server_socket, sip_message_t *request, int status_code, const char *reason)
 {
-    printf("Sending SIP error response: %d %s\n", status_code, reason);
+    log("Sending SIP error response: %d %s", status_code, reason);
 
     request->response_length = snprintf(request->response, sizeof(request->response),
                                         SIP_PROTOCOL_AND_VERSION " %d %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
@@ -40,11 +43,11 @@ void send_sip_error_response(int server_socket, sip_message_t *request, int stat
 
 int send_sip_error_response_over_transaction(int server_socket, sip_transaction_t *transaction, int status_code, const char *reason)
 {
-    printf("Sending SIP error response over transaction: %d %s\n", status_code, reason);
+    log("Sending SIP error response over transaction: %d %s", status_code, reason);
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
-        printf("Transaction has no associated request message\n");
+        error("Transaction has no associated request message");
         return -1;
     }
 
@@ -64,12 +67,12 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
 
 int send_100_trying_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
-    printf("Sending 100 Trying response over transaction\n");
+    log("Sending 100 Trying response over transaction");
 
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
-        printf("Transaction has no associated request message\n");
+        error("Transaction has no associated request message");
         return -1;
     }
 
@@ -89,11 +92,11 @@ int send_100_trying_response_over_transaction(int server_socket, sip_transaction
 
 int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
-    printf("Sending 180 Ringing response over transaction\n");
+    log("Sending 180 Ringing response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
-        printf("Transaction has no associated request message\n");
+        error("Transaction has no associated request message");
         return -1;
     }
 
@@ -114,11 +117,11 @@ int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t
 
 int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
-    printf("Sending 200 OK response over transaction\n");
+    log("Sending 200 OK response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
-        printf("Transaction has no associated request message\n");
+        error("Transaction has no associated request message");
         return -1;
     }
 
@@ -140,11 +143,11 @@ int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction
 // TODO, do we need to update client address info from via header?
 int send_last_response_over_transaction(int server_socket, sip_transaction_t *transaction)
 {
-    printf("Resending last response over transaction\n");
+    log("Resending last response over transaction");
     sip_message_t *request = transaction->message;
     if (request == NULL)
     {
-        printf("Transaction has no associated request message\n");
+        error("Transaction has no associated request message");
         return -1;
     }
     return send_message(server_socket, request->response, request->response_length, &request->client_addr, request->client_addr_len);
@@ -164,7 +167,7 @@ int sockaddr_in_equal(const struct sockaddr_in *a, const struct sockaddr_in *b)
 
 void process_invite_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
-    printf("Processing SIP INVITE request\n");
+    log("Processing SIP INVITE request");
     sip_message_t *request = transaction->message;
 
     if (transaction->dialog == NULL)
@@ -172,7 +175,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 
         if (send_100_trying_response_over_transaction(worker->server_socket, transaction) != 0)
         {
-            printf("Failed to send 100 Trying response\n");
+            error("Failed to send 100 Trying response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
@@ -183,7 +186,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         sip_dialog_t *dialog = create_new_dialog(&worker->dialogs, request->from_tag, request->from_tag_length);
         if (dialog == NULL)
         {
-            printf("Failed to create new SIP dialog\n");
+            error("Failed to create new SIP dialog");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
@@ -196,7 +199,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         sip_call_t *call = create_new_call(&worker->calls, request->call_id, request->call_id_length);
         if (call == NULL)
         {
-            printf("Failed to create new SIP call\n");
+            error("Failed to create new SIP call");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
@@ -207,7 +210,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 
         if (send_180_ring_response_over_transaction(worker->server_socket, transaction) != 0)
         {
-            printf("Failed to send 180 Ringing response\n");
+            error("Failed to send 180 Ringing response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
@@ -217,7 +220,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         // TODO to simulate call setup delay, send 200 OK after a short delay in a timer logic
         if (send_sip_200_ok_response_over_transaction(worker->server_socket, transaction) != 0)
         {
-            printf("Failed to send 200 OK response\n");
+            error("Failed to send 200 OK response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             // TODO resource cleanup
             return;
@@ -234,29 +237,25 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
 
 void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
-    printf("Processing SIP ACK request\n");
-
-    printf("Transaction state: %d\n", transaction->state);
-    printf("Dialog state: %d\n", transaction->dialog->state);
-    printf("Call state: %d\n", transaction->dialog->call->state);
+    log("Processing SIP ACK request");
 
     if (transaction->state == SIP_TRANSACTION_STATE_COMPLETED && transaction->message->method_type == INVITE && transaction->ack_message != NULL && transaction->ack_message->method_type == ACK)
     {
         // ack for failed INVITE
-        printf("ACK for failed INVITE\n");
+        log("ACK for failed INVITE");
         set_transaction_state(transaction, SIP_TRANSACTION_STATE_CONFIRMED);
         // TODO resource cleanup
     }
     else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
         // ACK for successful INVITE
-        printf("ACK for successful INVITE\n");
+        log("ACK for successful INVITE");
         // TODO resource cleanup
     }
     else
     {
         // ACK for other requests
-        printf("unexpected ACK\n");
+        log("unexpected ACK");
         // TODO resource cleanup
     }
     set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
@@ -264,7 +263,7 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
 
 void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction)
 {
-    printf("Processing SIP BYE request\n");
+    log("Processing SIP BYE request");
 
     if (transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
@@ -289,7 +288,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         transaction = create_new_transaction(&worker->transactions, message->branch, message->branch_length);
         if (transaction == NULL)
         {
-            printf("Failed to create new SIP transaction\n");
+            error("Failed to create new SIP transaction");
             send_sip_error_response(worker->server_socket, message, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             cleanup_sip_message(message);
             return;
@@ -303,15 +302,15 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
             strncmp(message->cseq, transaction->message->cseq, message->cseq_length) != 0 ||
             sockaddr_in_equal(&message->client_addr, &transaction->message->client_addr) != 0)
         {
-            printf("Received message is different than existing transaction message.\n");
+            log("Received message is different than existing transaction message.");
             if (transaction->message->method_type == INVITE && message->method_type == ACK)
             {
-                printf("ACK for INVITE\n");
+                log("ACK for INVITE");
                 transaction->ack_message = message;
             }
             else
             {
-                printf("New request for existing transaction branch id\n");
+                error("New request for existing transaction branch id");
                 cleanup_sip_message(message);
                 return;
             }
@@ -320,7 +319,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         {
             if (send_last_response_over_transaction(worker->server_socket, transaction) != 0)
             {
-                printf("Failed to resend last response over transaction\n");
+                error("Failed to resend last response over transaction");
                 send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             }
             cleanup_sip_message(message);
@@ -348,7 +347,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         return process_bye_request(worker, transaction);
     default:
         // TODO other methods
-        printf("Unsupported SIP method: %s\n", message->method);
+        error("Unsupported SIP method: %s", message->method);
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_501_NOT_IMPLEMENTED);
         // TODO resource cleanup
     }
@@ -356,37 +355,43 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
 
 void process_provisional_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP provisional response\n");
+    log("Processing SIP provisional response");
+    // TODO
     cleanup_sip_message(message);
 }
 
 void process_successful_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP successful response\n");
+    log("Processing SIP successful response");
+    // TODO
     cleanup_sip_message(message);
 }
 
 void process_redirection_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP redirection response\n");
+    log("Processing SIP redirection response");
+    // TODO
     cleanup_sip_message(message);
 }
 
 void process_client_error_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP client error response\n");
+    log("Processing SIP client error response");
+    // TODO
     cleanup_sip_message(message);
 }
 
 void process_server_error_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP server error response\n");
+    log("Processing SIP server error response");
+    // TODO
     cleanup_sip_message(message);
 }
 
 void process_global_failure_response(worker_thread_t *worker, sip_message_t *message)
 {
-    printf("Processing SIP global failure response\n");
+    log("Processing SIP global failure response");
+    // TODO
     cleanup_sip_message(message);
 }
 
@@ -395,7 +400,7 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
     sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, message->branch, message->branch_length);
     if (transaction == NULL)
     {
-        printf("No matching transaction found for SIP response with branch: %.*s\n", (int)message->branch_length, message->branch);
+        error("No matching transaction found for SIP response with branch: %.*s", (int)message->branch_length, message->branch);
         cleanup_sip_message(message);
         return;
     }
@@ -426,7 +431,7 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
     }
     else
     {
-        printf("Unknown SIP response status code: %d\n", message->status_code);
+        error("Unknown SIP response status code: %d", message->status_code);
         cleanup_sip_message(message);
     }
 }
@@ -447,12 +452,12 @@ void *process_sip_messages(void *arg)
         if (dequeue_message(queue, &message))
         {
             // Process the SIP message here
-            printf("Processing SIP message: \n\n%s\n", message->buffer);
+            log("Incoming SIP message:\n>>>>>>>>>>>>>>>>>>>>>>>>>\n%s>>>>>>>>>>>>>>>>>>>>>>>>>\n", message->buffer);
 
             sip_msg_error_t err = parse_message(message);
             if (err != ERROR_NONE)
             {
-                printf("Failed to parse SIP message: %d\n", err);
+                error("Failed to parse SIP message: %d", err);
                 cleanup_sip_message(message);
                 continue;
             }

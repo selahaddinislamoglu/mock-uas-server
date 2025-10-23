@@ -1,7 +1,12 @@
 #include "sip_utils.h"
+#include "log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+const char *call_states[] = {SIP_CALL_STATE_IDLE_TEXT, SIP_CALL_STATE_INCOMING_TEXT, SIP_CALL_STATE_RINGING_TEXT, SIP_CALL_STATE_ESTABLISHED_TEXT, SIP_CALL_STATE_FAILED_TEXT, SIP_CALL_STATE_TERMINATING_TEXT, SIP_CALL_STATE_TERMINATED_TEXT};
+const char *dialog_states[] = {SIP_DIALOG_STATE_IDLE_TEXT, SIP_DIALOG_STATE_EARLY_TEXT, SIP_DIALOG_STATE_CONFIRMED_TEXT, SIP_DIALOG_STATE_TERMINATED_TEXT};
+const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_CONFIRMED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
 
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length)
 {
@@ -139,8 +144,7 @@ void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
 
 void set_call_state(sip_call_t *call, sip_call_state_t state)
 {
-    const char *call_states[] = {SIP_CALL_STATE_IDLE_TEXT, SIP_CALL_STATE_INCOMING_TEXT, SIP_CALL_STATE_RINGING_TEXT, SIP_CALL_STATE_ESTABLISHED_TEXT, SIP_CALL_STATE_FAILED_TEXT, SIP_CALL_STATE_TERMINATING_TEXT, SIP_CALL_STATE_TERMINATED_TEXT};
-    printf("Setting call state from %s to %s\n", call_states[call->state], call_states[state]);
+    log("Setting call state from %s to %s id %.*s", call_states[call->state], call_states[state], (int)call->call_id_length, call->call_id);
     call->state = state;
 }
 
@@ -298,9 +302,8 @@ void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
 
 void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
 {
-    const char *dialog_states[] = {SIP_DIALOG_STATE_IDLE_TEXT, SIP_DIALOG_STATE_EARLY_TEXT, SIP_DIALOG_STATE_CONFIRMED_TEXT, SIP_DIALOG_STATE_TERMINATED_TEXT};
 
-    printf("Setting dialog state from %s to %s\n", dialog_states[dialog->state], dialog_states[state]);
+    log("Setting dialog state from %s to %s id %.*s %.*s", dialog_states[dialog->state], dialog_states[state], (int)dialog->from_tag_length, dialog->from_tag, (int)dialog->to_tag_length, dialog->to_tag);
     dialog->state = state;
 }
 
@@ -430,7 +433,6 @@ void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog
 
 void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state)
 {
-    const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_CONFIRMED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
-    printf("Setting transaction state from %s to %s\n", transaction_states[transaction->state], transaction_states[state]);
+    log("Setting transaction state from %s to %s id %.*s", transaction_states[transaction->state], transaction_states[state], (int)transaction->branch_length, transaction->branch);
     transaction->state = state;
 }

@@ -5,6 +5,7 @@
 
 #include "sip_server.h"
 #include "network_utils.h"
+#include "log.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +43,7 @@ int main()
         initialize_message_queue(&worker_threads[i].queue, QUEUE_CAPACITY);
         if (pthread_create(&worker_threads[i].thread, NULL, process_sip_messages, &worker_threads[i]) != 0)
         {
-            perror("Failed to create worker thread");
+            error("Failed to create worker thread: %s", strerror(errno));
             close(server_socket);
             exit(EXIT_FAILURE);
         }
@@ -70,14 +71,14 @@ void setup_server_socket(int *server_socket, struct sockaddr_in *server_addr)
     *server_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (*server_socket < 0)
     {
-        perror("Socket creation failed");
+        error("Failed to create server socket: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     int flags = fcntl(*server_socket, F_GETFL, 0);
     if (flags == -1 || fcntl(*server_socket, F_SETFL, flags | O_NONBLOCK) == -1)
     {
-        perror("Failed to set non-blocking socket");
+        error("Failed to set non-blocking socket: %s", strerror(errno));
         close(*server_socket);
         exit(EXIT_FAILURE);
     }
@@ -89,12 +90,12 @@ void setup_server_socket(int *server_socket, struct sockaddr_in *server_addr)
 
     if (bind(*server_socket, (struct sockaddr *)server_addr, sizeof(struct sockaddr_in)) < 0)
     {
-        perror("Socket bind failed");
+        error("Failed to bind server socket: %s", strerror(errno));
         close(*server_socket);
         exit(EXIT_FAILURE);
     }
 
-    printf("SIP server started on port %d (non-blocking mode)\n", SIP_PORT);
+    info("SIP server started on port %d (non-blocking mode)", SIP_PORT);
 }
 
 void handle_new_message(int server_socket)
@@ -107,7 +108,7 @@ void handle_new_message(int server_socket)
 
     if (select(server_socket + 1, &read_fds, NULL, NULL, &tv) < 0)
     {
-        perror("Select error");
+        error("Select error: %s", strerror(errno));
         return;
     }
 
@@ -116,7 +117,7 @@ void handle_new_message(int server_socket)
         sip_message_t *message = malloc(sizeof(sip_message_t));
         if (message == NULL)
         {
-            fprintf(stderr, "Memory allocation failed\n");
+            error("Memory allocation failed");
             return;
         }
         memset(message, 0, sizeof(sip_message_t));
@@ -133,23 +134,23 @@ void handle_new_message(int server_socket)
             call_id = get_message_call_id(message, &call_id_length);
             if (call_id == NULL)
             {
-                printf("Received SIP message without Call-ID\n");
+                error("Received SIP message without Call-ID");
                 // TODO: send error response
                 free(message);
             }
             else
             {
-                printf("Received SIP message with Call-ID: %.*s\n", (int)call_id_length, call_id);
+                log("Received SIP message with Call-ID: %.*s", (int)call_id_length, call_id);
                 int hash = string_to_int_hash(call_id, call_id_length);
                 int selected_thread = 0;
                 if (MAX_THREADS > 0)
                 {
                     selected_thread = hash % MAX_THREADS;
                 }
-                printf("Dispatching to worker thread %d\n", selected_thread);
+                log("Dispatching to worker thread %d", selected_thread);
                 if (!enqueue_message(&worker_threads[selected_thread].queue, message))
                 {
-                    fprintf(stderr, "Failed to enqueue message\n");
+                    error("Failed to enqueue message");
                     // TODO: send error response
                     free(message);
                 }
@@ -159,7 +160,7 @@ void handle_new_message(int server_socket)
         {
             if (bytes_received < 0 && errno != EWOULDBLOCK)
             {
-                perror("Error receiving data");
+                error("Failed to receive SIP message: %s\n", strerror(errno));
             }
             free(message);
         }

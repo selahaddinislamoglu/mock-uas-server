@@ -1,4 +1,5 @@
 #include "sip_message.h"
+#include "log.h"
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -131,7 +132,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
     const char *line_end = strstr(message->buffer, CRLF);
     if (line_end == NULL)
     {
-        printf("First line is malformed\n");
+        error("First line is malformed");
         return ERROR_MALFORMED_MESSAGE;
     }
     const char *line_start = message->buffer;
@@ -143,7 +144,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         const char *dash_pos = strchr(line_start, '/');
         if (dash_pos == NULL || dash_pos + 2 >= line_end)
         {
-            printf("SIP version is malformed\n");
+            error("SIP version is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->version_major = atoi(dash_pos + 1);
@@ -158,7 +159,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         }
         if (status_code_start >= line_end)
         {
-            printf("Status code is malformed\n");
+            error("Status code is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->status_code = atoi(status_code_start);
@@ -172,7 +173,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         }
         if (reason_start >= line_end)
         {
-            printf("Reason is malformed\n");
+            error("Reason is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->reason = reason_start + 1;
@@ -190,7 +191,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         const char *space_pos = strchr(method, ' ');
         if (space_pos == NULL || space_pos >= line_end)
         {
-            printf("Request line is malformed\n");
+            error("Request line is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->method = method;
@@ -205,13 +206,13 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         }
         if (sip_pos >= line_end)
         {
-            printf("URI is malformed\n");
+            error("URI is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         const char *uri_end = strchr(sip_pos, ' ');
         if (uri_end == NULL || uri_end >= line_end)
         {
-            printf("URI is malformed\n");
+            error("URI is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->uri = sip_pos;
@@ -222,7 +223,7 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
         const char *dash_pos = strchr(uri_end, '/');
         if (dash_pos == NULL || dash_pos + 2 >= line_end)
         {
-            printf("SIP version is malformed\n");
+            error("SIP version is malformed");
             return ERROR_MALFORMED_MESSAGE;
         }
         message->version_major = atoi(dash_pos + 1);
@@ -327,14 +328,14 @@ sip_msg_error_t parse_message(sip_message_t *message)
     sip_msg_error_t err = parse_first_line(message);
     if (err != ERROR_NONE)
     {
-        printf("Failed to parse first line\n");
+        error("Failed to parse first line");
         return err;
     }
 
     sip_method_t method = get_message_method(message);
     if (method == UNKNOWN)
     {
-        printf("Unknown method\n");
+        error("Unknown method");
         return ERROR_UNKNOWN_METHOD;
     }
 
@@ -345,7 +346,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_message_from(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("From header is missing\n");
+        error("From header is missing");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
@@ -353,7 +354,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_from_tag(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("From tag parameter is missing in From header\n");
+        error("From tag parameter is missing in From header");
         return ERROR_MISSING_MANDATORY_PARAMETER;
     }
 
@@ -361,7 +362,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_message_to(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("To header is missing\n");
+        error("To header is missing");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
@@ -371,7 +372,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_message_via(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("Via header is missing\n");
+        error("Via header is missing");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
@@ -379,7 +380,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_branch_param(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("Branch parameter is missing in Via header\n");
+        error("Branch parameter is missing in Via header");
         return ERROR_MISSING_MANDATORY_PARAMETER;
     }
 
@@ -387,7 +388,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_message_cseq(message, &length);
     if (header == NULL || length == 0)
     {
-        printf("CSeq header is missing\n");
+        error("CSeq header is missing");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
@@ -397,7 +398,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
         header = get_header_value(message->buffer, HEADER_NAME_MAX_FORWARDS, &length);
         if (header == NULL || length == 0)
         {
-            printf("Max-Forwards header is missing\n");
+            error("Max-Forwards header is missing");
             return ERROR_MISSING_MANDATORY_HEADER;
         }
     }
@@ -406,7 +407,7 @@ sip_msg_error_t parse_message(sip_message_t *message)
     header = get_header_value(message->buffer, HEADER_NAME_CONTENT_LENGTH, &length);
     if (header == NULL || length == 0)
     {
-        printf("Content-Length header is missing\n");
+        error("Content-Length header is missing");
         return ERROR_MISSING_MANDATORY_HEADER;
     }
 
