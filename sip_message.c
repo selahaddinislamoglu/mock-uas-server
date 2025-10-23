@@ -7,6 +7,10 @@
 
 #define CRLF "\r\n"
 
+/**
+ * @brief Frees memory allocated for a SIP message.
+ * @param message The SIP message to free.
+ */
 void cleanup_sip_message(sip_message_t *message)
 {
     if (message != NULL)
@@ -15,6 +19,13 @@ void cleanup_sip_message(sip_message_t *message)
     }
 }
 
+/**
+ * @brief Retrieves the value of a specific header from a SIP message.
+ * @param buffer The buffer containing the SIP message.
+ * @param header_name The name of the header to retrieve.
+ * @param length Pointer to store the length of the header value.
+ * @return The value of the header, or NULL if the header is not found.
+ */
 const char *get_header_value(const char *buffer, const char *header_name, size_t *length)
 {
     size_t header_name_len = strlen(header_name);
@@ -42,6 +53,12 @@ const char *get_header_value(const char *buffer, const char *header_name, size_t
     return NULL;
 }
 
+/**
+ * @brief Retrieves the value of the "Call-ID" header from a SIP message.
+ * @param message The SIP message to retrieve the header value from.
+ * @param length Pointer to store the length of the "Call-ID" header value.
+ * @return The value of the "Call-ID" header, or NULL if the header is not found.
+ */
 const char *get_message_call_id(sip_message_t *message, size_t *length)
 {
     if (message->call_id_length > 0 && message->call_id != NULL)
@@ -59,6 +76,12 @@ const char *get_message_call_id(sip_message_t *message, size_t *length)
     return call_id;
 }
 
+/**
+ * @brief Retrieves the value of the "From" header from a SIP message.
+ * @param message The SIP message to retrieve the header value from.
+ * @param length Pointer to store the length of the "From" header value.
+ * @return The value of the "From" header, or NULL if the header is not found.
+ */
 const char *get_message_from(sip_message_t *message, size_t *length)
 {
     if (message->from_length > 0 && message->from != NULL)
@@ -76,6 +99,12 @@ const char *get_message_from(sip_message_t *message, size_t *length)
     return from;
 }
 
+/**
+ * @brief Retrieves the value of the "To" header from a SIP message.
+ * @param message The SIP message to retrieve the header value from.
+ * @param length Pointer to store the length of the "To" header value.
+ * @return The value of the "To" header, or NULL if the header is not found.
+ */
 const char *get_message_to(sip_message_t *message, size_t *length)
 {
     if (message->to_length > 0 && message->to != NULL)
@@ -93,6 +122,12 @@ const char *get_message_to(sip_message_t *message, size_t *length)
     return to;
 }
 
+/**
+ * @brief Retrieves the value of the "Via" header from a SIP message.
+ * @param message The SIP message to retrieve the header value from.
+ * @param length Pointer to store the length of the "Via" header value.
+ * @return The value of the "Via" header, or NULL if the header is not found.
+ */
 const char *get_message_via(sip_message_t *message, size_t *length)
 {
     if (message->via_length > 0 && message->via != NULL)
@@ -110,6 +145,12 @@ const char *get_message_via(sip_message_t *message, size_t *length)
     return via;
 }
 
+/**
+ * @brief Retrieves the value of the "CSeq" header from a SIP message.
+ * @param message The SIP message to retrieve the header value from.
+ * @param length Pointer to store the length of the "CSeq" header value.
+ * @return The value of the "CSeq" header, or NULL if the header is not found.
+ */
 const char *get_message_cseq(sip_message_t *message, size_t *length)
 {
     if (message->cseq_length > 0 && message->cseq != NULL)
@@ -127,6 +168,11 @@ const char *get_message_cseq(sip_message_t *message, size_t *length)
     return cseq;
 }
 
+/**
+ * @brief Parses the first line of a SIP message.
+ * @param message The SIP message to parse.
+ * @return A sip_msg_error_t indicating the result of the parsing operation.
+ */
 sip_msg_error_t parse_first_line(sip_message_t *message)
 {
     const char *line_end = strstr(message->buffer, CRLF);
@@ -235,6 +281,12 @@ sip_msg_error_t parse_first_line(sip_message_t *message)
     }
 }
 
+/**
+ * @brief Retrieves the "From" tag from a SIP message.
+ * @param message The SIP message to retrieve the tag from.
+ * @param length The length of the tag, if found.
+ * @return A pointer to the tag, or NULL if the tag is not found.
+ */
 const char *get_from_tag(sip_message_t *message, size_t *length)
 {
     if (message->from == NULL || message->from_length == 0)
@@ -263,6 +315,12 @@ const char *get_from_tag(sip_message_t *message, size_t *length)
     return tag_start;
 }
 
+/**
+ * @brief Retrieves the "To" tag from a SIP message.
+ * @param message The SIP message to retrieve the tag from.
+ * @param length The length of the tag, if found.
+ * @return A pointer to the tag, or NULL if the tag is not found.
+ */
 const char *get_to_tag(sip_message_t *message, size_t *length)
 {
     if (message->to == NULL || message->to_length == 0)
@@ -291,6 +349,12 @@ const char *get_to_tag(sip_message_t *message, size_t *length)
     return tag_start;
 }
 
+/**
+ * @brief Retrieves the branch parameter from a SIP message.
+ * @param message The SIP message to retrieve the branch parameter from.
+ * @param length The length of the branch parameter, if found.
+ * @return A pointer to the branch parameter, or NULL if the parameter is not found.
+ */
 const char *get_branch_param(sip_message_t *message, size_t *length)
 {
     if (message->via == NULL || message->via_length == 0)
@@ -319,6 +383,11 @@ const char *get_branch_param(sip_message_t *message, size_t *length)
     return branch_start;
 }
 
+/**
+ * @brief Parses a SIP message. Uses lazy parsing to avoid unnecessary allocations.
+ * @param message The SIP message to parse.
+ * @return An error code indicating the success or failure of the parsing operation.
+ */
 sip_msg_error_t parse_message(sip_message_t *message)
 {
     const char *header;
@@ -416,6 +485,9 @@ sip_msg_error_t parse_message(sip_message_t *message)
     return ERROR_NONE;
 }
 
+/**
+ * @brief Retrieves the method of a SIP message.
+ */
 sip_method_t get_message_method(sip_message_t *message)
 {
     if (!message->is_request)

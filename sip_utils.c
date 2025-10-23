@@ -8,6 +8,13 @@ const char *call_states[] = {SIP_CALL_STATE_IDLE_TEXT, SIP_CALL_STATE_INCOMING_T
 const char *dialog_states[] = {SIP_DIALOG_STATE_IDLE_TEXT, SIP_DIALOG_STATE_EARLY_TEXT, SIP_DIALOG_STATE_CONFIRMED_TEXT, SIP_DIALOG_STATE_TERMINATED_TEXT};
 const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_CONFIRMED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
 
+/**
+ * @brief Finds a call by its ID.
+ * @param calls The list of calls to search.
+ * @param call_id The ID of the call to find.
+ * @param call_id_length The length of the call ID.
+ * @return A pointer to the call if found, or NULL if not found.
+ */
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length)
 {
     sip_call_t *current = calls;
@@ -23,6 +30,13 @@ sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_
     return NULL;
 }
 
+/**
+ * @brief Creates a new call and adds it to the list of calls.
+ * @param calls The list of calls to add the new call to.
+ * @param call_id The ID of the new call.
+ * @param call_id_length The length of the call ID.
+ * @return A pointer to the new call.
+ */
 sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call_id_length)
 {
     sip_call_t *new_call = (sip_call_t *)malloc(sizeof(sip_call_t));
@@ -38,11 +52,21 @@ sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call
     return new_call;
 }
 
+/**
+ * @brief Frees memory allocated for a call.
+ * @param call The call to free.
+ */
 void cleanup_call(sip_call_t *call)
 {
     free(call);
 }
 
+/**
+ * @brief Deletes a call from the list of calls.
+ * @param calls The list of calls to delete the call from.
+ * @param call_id The ID of the call to delete.
+ * @param call_id_length The length of the call ID.
+ */
 void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_length)
 {
     sip_call_t *current = *calls;
@@ -69,6 +93,11 @@ void delete_call_by_id(sip_call_t **calls, const char *call_id, size_t call_id_l
     }
 }
 
+/**
+ * @brief Deletes a call from the list of calls.
+ * @param calls The list of calls to delete the call from.
+ * @param call The call to delete.
+ */
 void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call)
 {
     sip_call_t *current = *calls;
@@ -94,6 +123,10 @@ void delete_call_by_pointer(sip_call_t **calls, sip_call_t *call)
     }
 }
 
+/**
+ * @brief Deletes all calls from the list of calls.
+ * @param calls The list of calls to delete.
+ */
 void delete_all_calls(sip_call_t **calls)
 {
     sip_call_t *current = *calls;
@@ -108,6 +141,11 @@ void delete_all_calls(sip_call_t **calls)
     *calls = NULL;
 }
 
+/**
+ * @brief Adds a dialog to a call.
+ * @param call The call to add the dialog to.
+ * @param dialog The dialog to add.
+ */
 void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
 { // TODO boundary check
     int reserved = -1;
@@ -129,6 +167,11 @@ void add_dialog_to_call(sip_call_t *call, sip_dialog_t *dialog)
     }
 }
 
+/**
+ * @brief Removes a dialog from a call.
+ * @param call The call to remove the dialog from.
+ * @param dialog The dialog to remove.
+ */
 void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
 {
     // TODO boundary check
@@ -142,12 +185,26 @@ void remove_dialog_from_call(sip_call_t *call, sip_dialog_t *dialog)
     }
 }
 
+/**
+ * @brief Sets the state of a call.
+ * @param call The call to set the state of.
+ * @param state The state to set the call to.
+ */
 void set_call_state(sip_call_t *call, sip_call_state_t state)
 {
     log("Setting call state from %s to %s id %.*s", call_states[call->state], call_states[state], (int)call->call_id_length, call->call_id);
     call->state = state;
 }
 
+/**
+ * @brief Finds a dialog by its ID.
+ * @param dialogs The list of dialogs to search.
+ * @param from_tag The ID of the dialog to find.
+ * @param from_tag_length The length of the dialog ID.
+ * @param to_tag The ID of the dialog to find.
+ * @param to_tag_length The length of the dialog ID.
+ * @return The found dialog, or NULL if not found.
+ */
 sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
     sip_dialog_t *current = dialogs;
@@ -167,6 +224,11 @@ sip_dialog_t *find_dialog_by_id(sip_dialog_t *dialogs, const char *from_tag, siz
     return NULL;
 }
 
+/**
+ * @brief Creates to tag.
+ * @param to_tag_buffer The buffer to create the tag in.
+ * @param buffer_size The size of the buffer.
+ */
 void create_to_tag(char *to_tag_buffer, size_t buffer_size)
 {
     char c;
@@ -178,6 +240,13 @@ void create_to_tag(char *to_tag_buffer, size_t buffer_size)
     }
 }
 
+/**
+ * @brief Creates a new dialog and adds it to the list of dialogs.
+ * @param dialogs The list of dialogs to add the new dialog to.
+ * @param from_tag The ID of the new dialog.
+ * @param from_tag_length The length of the dialog ID.
+ * @return A pointer to the new dialog.
+ */
 sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length)
 {
     sip_dialog_t *new_dialog = (sip_dialog_t *)malloc(sizeof(sip_dialog_t));
@@ -195,6 +264,10 @@ sip_dialog_t *create_new_dialog(sip_dialog_t **dialogs, const char *from_tag, si
     return new_dialog;
 }
 
+/**
+ * @brief Frees memory allocated for a dialog.
+ * @param dialog The dialog to free.
+ */
 void cleanup_dialog(sip_dialog_t *dialog)
 {
     if (dialog->call != NULL)
@@ -204,6 +277,14 @@ void cleanup_dialog(sip_dialog_t *dialog)
     free(dialog);
 }
 
+/**
+ * @brief Deletes a dialog from the list of dialogs.
+ * @param dialogs The list of dialogs to delete the dialog from.
+ * @param from_tag The ID of the dialog to delete.
+ * @param from_tag_length The length of the dialog ID.
+ * @param to_tag The ID of the dialog to delete.
+ * @param to_tag_length The length of the dialog ID.
+ */
 void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t from_tag_length, const char *to_tag, size_t to_tag_length)
 {
     sip_dialog_t *current = *dialogs;
@@ -234,6 +315,11 @@ void delete_dialog_by_id(sip_dialog_t **dialogs, const char *from_tag, size_t fr
     }
 }
 
+/**
+ * @brief Deletes a dialog from the list of dialogs.
+ * @param dialogs The list of dialogs to delete the dialog from.
+ * @param dialog The dialog to delete.
+ */
 void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
 {
     sip_dialog_t *current = *dialogs;
@@ -259,6 +345,11 @@ void delete_dialog_by_pointer(sip_dialog_t **dialogs, sip_dialog_t *dialog)
     }
 }
 
+/**
+ * @brief Adds a transaction to a dialog.
+ * @param dialog The dialog to add the transaction to.
+ * @param transaction The transaction to add.
+ */
 void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
 {
     // TODO boundary check
@@ -281,6 +372,11 @@ void add_transaction_to_dialog(sip_dialog_t *dialog, sip_transaction_t *transact
     }
 }
 
+/**
+ * @brief Removes a transaction from a dialog.
+ * @param dialog The dialog to remove the transaction from.
+ * @param transaction The transaction to remove.
+ */
 void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *transaction)
 {
     // TODO boundary check
@@ -294,12 +390,22 @@ void remove_transaction_from_dialog(sip_dialog_t *dialog, sip_transaction_t *tra
     }
 }
 
+/**
+ * @brief Sets the call of a dialog.
+ * @param dialog The dialog to set the call of.
+ * @param call The call to set.
+ */
 void set_dialog_call(sip_dialog_t *dialog, sip_call_t *call)
 {
     dialog->call = call;
     add_dialog_to_call(call, dialog);
 }
 
+/**
+ * @brief Sets the state of a dialog.
+ * @param dialog The dialog to set the state of.
+ * @param state The state to set the dialog to.
+ */
 void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
 {
 
@@ -307,6 +413,10 @@ void set_dialog_state(sip_dialog_t *dialog, sip_dialog_state_t state)
     dialog->state = state;
 }
 
+/**
+ * @brief Deletes all dialogs from the list of dialogs.
+ * @param dialogs The list of dialogs to delete.
+ */
 void delete_all_dialogs(sip_dialog_t **dialogs)
 {
     sip_dialog_t *current = *dialogs;
@@ -321,6 +431,13 @@ void delete_all_dialogs(sip_dialog_t **dialogs)
     *dialogs = NULL;
 }
 
+/**
+ * @brief Finds a transaction by its branch.
+ * @param transactions The list of transactions to search.
+ * @param branch The branch of the transaction to find.
+ * @param branch_length The length of the branch.
+ * @return The transaction if found, NULL otherwise.
+ */
 sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const char *branch, size_t branch_length)
 {
     sip_transaction_t *current = transactions;
@@ -335,6 +452,14 @@ sip_transaction_t *find_transaction_by_id(sip_transaction_t *transactions, const
     }
     return NULL;
 }
+
+/**
+ * @brief Creates a new transaction.
+ * @param transactions The list of transactions to add the new transaction to.
+ * @param branch The branch of the new transaction.
+ * @param branch_length The length of the branch.
+ * @return The new transaction if successful, NULL otherwise.
+ */
 sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, const char *branch, size_t branch_length)
 {
     sip_transaction_t *new_transaction = (sip_transaction_t *)malloc(sizeof(sip_transaction_t));
@@ -350,6 +475,10 @@ sip_transaction_t *create_new_transaction(sip_transaction_t **transactions, cons
     return new_transaction;
 }
 
+/**
+ * @brief Frees memory allocated for a transaction.
+ * @param transaction The transaction to free.
+ */
 void cleanup_transaction(sip_transaction_t *transaction)
 {
     if (transaction->dialog != NULL)
@@ -360,6 +489,12 @@ void cleanup_transaction(sip_transaction_t *transaction)
     free(transaction);
 }
 
+/**
+ * @brief Deletes a transaction from the list of transactions.
+ * @param transactions The list of transactions to delete the transaction from.
+ * @param branch The branch of the transaction to delete.
+ * @param branch_length The length of the branch.
+ */
 void delete_transaction_by_id(sip_transaction_t **transactions, const char *branch, size_t branch_length)
 {
     sip_transaction_t *current = *transactions;
@@ -386,6 +521,11 @@ void delete_transaction_by_id(sip_transaction_t **transactions, const char *bran
     }
 }
 
+/**
+ * @brief Deletes a transaction from the list of transactions.
+ * @param transactions The list of transactions to delete the transaction from.
+ * @param transaction The transaction to delete.
+ */
 void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transaction_t *transaction)
 {
     sip_transaction_t *current = *transactions;
@@ -411,6 +551,10 @@ void delete_transaction_by_pointer(sip_transaction_t **transactions, sip_transac
     }
 }
 
+/**
+ * @brief Deletes all transactions from the list of transactions.
+ * @param transactions The list of transactions to delete.
+ */
 void delete_all_transactions(sip_transaction_t **transactions)
 {
     sip_transaction_t *current = *transactions;
@@ -425,12 +569,22 @@ void delete_all_transactions(sip_transaction_t **transactions)
     *transactions = NULL;
 }
 
+/**
+ * @brief Sets the dialog of a transaction.
+ * @param transaction The transaction to set the dialog of.
+ * @param dialog The dialog to set.
+ */
 void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog)
 {
     transaction->dialog = dialog;
     add_transaction_to_dialog(dialog, transaction);
 }
 
+/**
+ * @brief Sets the state of a transaction.
+ * @param transaction The transaction to set the state of.
+ * @param state The state to set the transaction to.
+ */
 void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state)
 {
     log("Setting transaction state from %s to %s id %.*s", transaction_states[transaction->state], transaction_states[state], (int)transaction->branch_length, transaction->branch);
