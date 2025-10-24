@@ -312,6 +312,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             error("Failed to send 100 Trying response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
+            set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
             // TODO resource cleanup
             return;
         }
@@ -323,6 +324,7 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             error("Failed to create new SIP dialog");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
+            set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
             // TODO resource cleanup
             return;
         }
@@ -336,6 +338,8 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             error("Failed to create new SIP call");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
+            set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
+            set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
             // TODO resource cleanup
             return;
         }
@@ -347,6 +351,9 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             error("Failed to send 180 Ringing response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
+            set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
+            set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
+            set_call_state(call, SIP_CALL_STATE_FAILED);
             // TODO resource cleanup
             return;
         }
@@ -357,6 +364,9 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
         {
             error("Failed to send 200 OK response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
+            set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
+            set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
+            set_call_state(call, SIP_CALL_STATE_FAILED);
             // TODO resource cleanup
             return;
         }
