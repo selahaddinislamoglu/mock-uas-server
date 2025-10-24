@@ -6,7 +6,7 @@
 
 const char *call_states[] = {SIP_CALL_STATE_IDLE_TEXT, SIP_CALL_STATE_INCOMING_TEXT, SIP_CALL_STATE_RINGING_TEXT, SIP_CALL_STATE_ESTABLISHED_TEXT, SIP_CALL_STATE_FAILED_TEXT, SIP_CALL_STATE_TERMINATING_TEXT, SIP_CALL_STATE_TERMINATED_TEXT};
 const char *dialog_states[] = {SIP_DIALOG_STATE_IDLE_TEXT, SIP_DIALOG_STATE_EARLY_TEXT, SIP_DIALOG_STATE_CONFIRMED_TEXT, SIP_DIALOG_STATE_TERMINATED_TEXT};
-const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_CONFIRMED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
+const char *transaction_states[] = {SIP_TRANSACTION_STATE_IDLE_TEXT, SIP_TRANSACTION_STATE_PROCEEDING_TEXT, SIP_TRANSACTION_STATE_COMPLETED_TEXT, SIP_TRANSACTION_STATE_TERMINATED_TEXT};
 
 /**
  * @brief Finds a call by its ID.
@@ -731,4 +731,16 @@ void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state
     }
     log("Setting transaction state from %s to %s id %.*s", transaction_states[transaction->state], transaction_states[state], (int)transaction->branch_length, transaction->branch);
     transaction->state = state;
+
+    switch (transaction->state)
+    {
+    case SIP_TRANSACTION_STATE_COMPLETED:
+        // start timer for ACK
+        break;
+    case SIP_TRANSACTION_STATE_TERMINATED:
+        // start timer for cleanup
+        break;
+    default:
+        break;
+    }
 }

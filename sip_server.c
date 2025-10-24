@@ -313,7 +313,6 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             error("Failed to send 100 Trying response");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
-            // TODO resource cleanup
             return;
         }
 
@@ -325,7 +324,6 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             error("Failed to create new SIP dialog");
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
-            // TODO resource cleanup
             return;
         }
 
@@ -340,7 +338,6 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_500, RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR);
             set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
             set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
-            // TODO resource cleanup
             return;
         }
 
@@ -354,7 +351,6 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
             set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
             set_call_state(call, SIP_CALL_STATE_FAILED);
-            // TODO resource cleanup
             return;
         }
 
@@ -367,10 +363,9 @@ void process_invite_request(worker_thread_t *worker, sip_transaction_t *transact
             set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
             set_dialog_state(dialog, SIP_DIALOG_STATE_TERMINATED);
             set_call_state(call, SIP_CALL_STATE_FAILED);
-            // TODO resource cleanup
             return;
         }
-        set_transaction_state(transaction, SIP_TRANSACTION_STATE_COMPLETED);
+        set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
         set_dialog_state(dialog, SIP_DIALOG_STATE_CONFIRMED);
         set_call_state(call, SIP_CALL_STATE_ESTABLISHED);
     }
@@ -399,20 +394,16 @@ void process_ack_request(worker_thread_t *worker, sip_transaction_t *transaction
     {
         // ack for failed INVITE
         log("ACK for failed INVITE");
-        set_transaction_state(transaction, SIP_TRANSACTION_STATE_CONFIRMED);
-        // TODO resource cleanup
     }
     else if (transaction->state == SIP_TRANSACTION_STATE_IDLE && transaction->message->method_type == ACK && transaction->dialog != NULL && transaction->dialog->state == SIP_DIALOG_STATE_CONFIRMED)
     {
         // ACK for successful INVITE
         log("ACK for successful INVITE");
-        // TODO resource cleanup
     }
     else
     {
         // ACK for other requests
         log("unexpected ACK");
-        // TODO resource cleanup
     }
     set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
 }
@@ -452,7 +443,6 @@ void process_bye_request(worker_thread_t *worker, sip_transaction_t *transaction
 
 cleanup:
     set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
-    // TODO resource cleanup
 }
 
 /**
@@ -536,7 +526,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         // TODO other methods
         error("Unsupported SIP method: %s", message->method);
         send_sip_error_response_over_transaction(worker->server_socket, transaction, RESPONSE_CODE_501, RESPONSE_TEXT_501_NOT_IMPLEMENTED);
-        // TODO resource cleanup
+        set_transaction_state(transaction, SIP_TRANSACTION_STATE_TERMINATED);
     }
 }
 
