@@ -73,6 +73,15 @@ typedef enum
 #define METHOD_SIZE_REFER 5
 #define METHOD_SIZE_MESSAGE 7
 
+#define RESPONSE_TEXT_100_TRYING "Trying"
+#define RESPONSE_TEXT_180_RINGING "Ringing"
+#define RESPONSE_TEXT_200_OK "OK"
+#define RESPONSE_TEXT_400_BAD_REQUEST "Bad Request"
+#define RESPONSE_TEXT_403_FORBIDDEN "Forbidden"
+#define RESPONSE_TEXT_404_NOT_FOUND "Not Found"
+#define RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR "Internal Server Error"
+#define RESPONSE_TEXT_501_NOT_IMPLEMENTED "Not Implemented"
+
 typedef enum
 {
     UNKNOWN,
@@ -117,14 +126,11 @@ typedef enum
     RESPONSE_CODE_GLOBAL_FAILURE_END = 699
 } sip_response_code_e;
 
-#define RESPONSE_TEXT_100_TRYING "Trying"
-#define RESPONSE_TEXT_180_RINGING "Ringing"
-#define RESPONSE_TEXT_200_OK "OK"
-#define RESPONSE_TEXT_400_BAD_REQUEST "Bad Request"
-#define RESPONSE_TEXT_403_FORBIDDEN "Forbidden"
-#define RESPONSE_TEXT_404_NOT_FOUND "Not Found"
-#define RESPONSE_TEXT_500_INTERNAL_SERVER_ERROR "Internal Server Error"
-#define RESPONSE_TEXT_501_NOT_IMPLEMENTED "Not Implemented"
+typedef enum
+{
+    PACKET_TYPE_INCOMING_SIP = 0,
+    PACKET_TYPE_DELETE_TRANSACTION
+} packet_type_e;
 
 /**
  * @struct sip_message_t
@@ -132,6 +138,8 @@ typedef enum
  */
 typedef struct
 {
+    packet_type_e packet_type;
+
     char buffer[BUFFER_SIZE];
     size_t buffer_length;
 

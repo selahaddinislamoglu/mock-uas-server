@@ -8,9 +8,13 @@
 
 #include <stddef.h>
 #include "sip_message.h"
+#include "timer_manager.h"
+#include "message_queue.h"
 
 #define MAX_DIALOGS_PER_CALL 16
 #define MAX_TXNS_PER_DIALOG 32
+#define SIP_TRANSACTION_WAIT_ACK_TIMEOUT 5000
+#define SIP_TRANSACTION_DELETE_TIMEOUT 5000
 
 #define SIP_TRANSACTION_STATE_IDLE_TEXT "IDLE"
 #define SIP_TRANSACTION_STATE_PROCEEDING_TEXT "PROCEEDING"
@@ -67,6 +71,7 @@ struct sip_transaction_s
     //
     sip_dialog_t *dialog;
     sip_transaction_state_t state;
+    message_queue_t *queue;
     sip_message_t *message;
     sip_message_t *ack_message;
     char branch[SIP_BRANCH_MAX_LENGTH + 1];
@@ -96,6 +101,14 @@ struct sip_call_s
     char call_id[SIP_CALL_ID_MAX_LENGTH + 1];
     size_t call_id_length;
 };
+
+typedef struct
+{
+    packet_type_e packet_type;
+    char branch[SIP_BRANCH_MAX_LENGTH + 1];
+    size_t branch_length;
+    message_queue_t *queue;
+} transaction_delete_t;
 
 sip_call_t *find_call_by_id(sip_call_t *calls, const char *call_id, size_t call_id_length);
 sip_call_t *create_new_call(sip_call_t **calls, const char *call_id, size_t call_id_length);

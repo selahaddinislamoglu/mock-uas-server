@@ -18,7 +18,7 @@ void initialize_message_queue(message_queue_t *queue, int capacity)
     {
         capacity = 1;
     }
-    queue->messages = malloc(sizeof(sip_message_t *) * capacity);
+    queue->messages = malloc(sizeof(void *) * capacity);
     queue->capacity = capacity;
     queue->size = 0;
     queue->front = 0;
@@ -53,7 +53,7 @@ void destroy_message_queue(message_queue_t *queue)
  * @param message Pointer to the message to enqueue.
  * @return 1 on success, 0 if the queue is full.
  */
-int enqueue_message(message_queue_t *queue, sip_message_t *message)
+int enqueue_message(message_queue_t *queue, void *message)
 {
     if (queue == NULL || message == NULL)
     {
@@ -82,7 +82,7 @@ int enqueue_message(message_queue_t *queue, sip_message_t *message)
  * @param message Double pointer to store the dequeued message.
  * @return 1 on success, 0 if the queue is empty.
  */
-int dequeue_message(message_queue_t *queue, sip_message_t **message)
+int dequeue_message(message_queue_t *queue, void **message)
 {
     if (queue == NULL || message == NULL)
     {

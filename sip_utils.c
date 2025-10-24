@@ -1,5 +1,6 @@
 #include "sip_utils.h"
 #include "log.h"
+#include "timer_manager.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -337,6 +338,18 @@ void cleanup_dialog(sip_dialog_t *dialog)
     {
         log("Dialog is NULL");
         return;
+    }
+    for (size_t i = 0; i < MAX_TXNS_PER_DIALOG; i++)
+    {
+        if (dialog->transaction[i] != NULL)
+        {
+            if (dialog->transaction[i]->state != SIP_TRANSACTION_STATE_TERMINATED)
+            {
+                set_transaction_state(dialog->transaction[i], SIP_TRANSACTION_STATE_TERMINATED);
+            }
+            dialog->transaction[i]->dialog = NULL;
+            dialog->transaction[i] = NULL;
+        }
     }
     if (dialog->call != NULL)
     {
@@ -718,27 +731,88 @@ void set_transaction_dialog(sip_transaction_t *transaction, sip_dialog_t *dialog
 }
 
 /**
+ * @brief Sets the delete timeout for a transaction.
+ * @param data The transaction to set the delete timeout for.
+ */
+void transaction_delete_timeout(void *data)
+{
+    if (data == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
+    transaction_delete_t *event = (transaction_delete_t *)data;
+    log("Transaction: %.*s delete timeout", (int)event->branch_length, event->branch);
+    enqueue_message(event->queue, event);
+}
+
+/**
+ * @brief Sets the wait ack timeout for a transaction.
+ * @param data The transaction to set the wait ack timeout for.
+ */
+void transaction_wait_ack_timeout(void *data)
+{
+    if (data == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
+    transaction_delete_t *event = (transaction_delete_t *)data;
+    log("Transaction: %.*s wait ack timeout", (int)event->branch_length, event->branch);
+    timer_one_shot_add(SIP_TRANSACTION_DELETE_TIMEOUT, transaction_delete_timeout, event);
+}
+
+/**
  * @brief Sets the state of a transaction.
  * @param transaction The transaction to set the state of.
  * @param state The state to set the transaction to.
  */
 void set_transaction_state(sip_transaction_t *transaction, sip_transaction_state_t state)
 {
+    transaction_delete_t *event = NULL;
     if (transaction == NULL)
     {
         error("Invalid parameters");
         return;
     }
     log("Setting transaction state from %s to %s id %.*s", transaction_states[transaction->state], transaction_states[state], (int)transaction->branch_length, transaction->branch);
+
+    if (transaction->state == state)
+    {
+        error("Transaction %.*s already in state %s", (int)transaction->branch_length, transaction->branch, transaction_states[state]);
+        return;
+    }
     transaction->state = state;
 
     switch (transaction->state)
     {
     case SIP_TRANSACTION_STATE_COMPLETED:
         // start timer for ACK
+        event = malloc(sizeof(transaction_delete_t));
+        if (event == NULL)
+        {
+            error("Failed to allocate memory for transaction_delete_t");
+            return;
+        }
+        event->packet_type = PACKET_TYPE_DELETE_TRANSACTION;
+        event->branch_length = transaction->branch_length;
+        event->queue = transaction->queue;
+        snprintf(event->branch, sizeof(event->branch), "%.*s", (int)transaction->branch_length, transaction->branch);
+        timer_one_shot_add(SIP_TRANSACTION_WAIT_ACK_TIMEOUT, transaction_wait_ack_timeout, event);
         break;
     case SIP_TRANSACTION_STATE_TERMINATED:
         // start timer for cleanup
+        event = malloc(sizeof(transaction_delete_t));
+        if (event == NULL)
+        {
+            error("Failed to allocate memory for transaction_delete_t");
+            return;
+        }
+        event->packet_type = PACKET_TYPE_DELETE_TRANSACTION;
+        event->branch_length = transaction->branch_length;
+        event->queue = transaction->queue;
+        snprintf(event->branch, sizeof(event->branch), "%.*s", (int)transaction->branch_length, transaction->branch);
+        timer_one_shot_add(SIP_TRANSACTION_DELETE_TIMEOUT, transaction_delete_timeout, event);
         break;
     default:
         break;

@@ -7,7 +7,6 @@
 #define MESSAGE_QUEUE_H
 
 #include <pthread.h>
-#include "sip_message.h"
 
 /**
  * @struct message_queue_t
@@ -15,7 +14,7 @@
  */
 typedef struct
 {
-    sip_message_t **messages;
+    void **messages;
     int capacity;
     int size;
     int front;
@@ -26,7 +25,7 @@ typedef struct
 
 void initialize_message_queue(message_queue_t *queue, int capacity);
 void destroy_message_queue(message_queue_t *queue);
-int enqueue_message(message_queue_t *queue, sip_message_t *message);
-int dequeue_message(message_queue_t *queue, sip_message_t **message);
+int enqueue_message(message_queue_t *queue, void *message);
+int dequeue_message(message_queue_t *queue, void **message);
 
 #endif // MESSAGE_QUEUE_H

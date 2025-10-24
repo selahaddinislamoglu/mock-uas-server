@@ -472,6 +472,7 @@ void process_sip_request(worker_thread_t *worker, sip_message_t *message)
         }
 
         transaction->message = message;
+        transaction->queue = &(worker->queue);
     }
     else
     {
@@ -555,6 +556,47 @@ void process_sip_response(worker_thread_t *worker, sip_message_t *message)
 }
 
 /**
+ * @brief Deletes a transaction.
+ *
+ * @param worker The SIP server worker thread.
+ * @param event The transaction delete event.
+ */
+void delete_transaction(worker_thread_t *worker, transaction_delete_t *event)
+{
+    if (worker == NULL || event == NULL)
+    {
+        error("Invalid parameters");
+        return;
+    }
+
+    log("Trying to delete transaction: %.*s", (int)event->branch_length, event->branch);
+
+    sip_transaction_t *transaction = find_transaction_by_id(worker->transactions, event->branch, event->branch_length);
+    if (transaction == NULL)
+    {
+        error("No matching transaction found for transaction delete with branch: %.*s", (int)event->branch_length, event->branch);
+        return;
+    }
+
+    sip_dialog_t *dialog = transaction->dialog;
+    log("Deleting transaction: %.*s", (int)transaction->branch_length, transaction->branch);
+    delete_transaction_by_pointer(&(worker->transactions), transaction);
+
+    if (dialog != NULL && dialog->state == SIP_DIALOG_STATE_TERMINATED)
+    {
+        sip_call_t *call = dialog->call;
+        log("Deleting dialog: %.*s %.*s", (int)dialog->from_tag_length, dialog->from_tag, (int)dialog->to_tag_length, dialog->to_tag);
+        delete_dialog_by_pointer(&(worker->dialogs), dialog);
+
+        if (call != NULL && call->state == SIP_CALL_STATE_TERMINATED)
+        {
+            log("Deleting call: %.*s", (int)call->call_id_length, call->call_id);
+            delete_call_by_pointer(&(worker->calls), call);
+        }
+    }
+}
+
+/**
  * @brief Worker thread function to process SIP messages. Parses and processes incoming SIP messages.
  * @param arg Pointer to the worker thread's message queue.
  * @return NULL
@@ -568,30 +610,46 @@ void *process_sip_messages(void *arg)
     }
     worker_thread_t *worker = (worker_thread_t *)arg;
     message_queue_t *queue = &worker->queue;
-    sip_message_t *message;
+    void *packet;
 
     while (1)
     {
-        if (dequeue_message(queue, &message))
+        if (dequeue_message(queue, &packet))
         {
-            // Process the SIP message here
-            log("Incoming SIP message:\n>>>>>>>>>>>>>>>>>>>>>>>>>\n%s>>>>>>>>>>>>>>>>>>>>>>>>>\n", message->buffer);
+            packet_type_e packet_type = *((packet_type_e *)packet);
 
-            sip_msg_error_t err = parse_message(message);
-            if (err != ERROR_NONE)
+            switch (packet_type)
             {
-                error("Failed to parse SIP message: %d", err);
-                cleanup_sip_message(message);
-                continue;
-            }
+            case PACKET_TYPE_INCOMING_SIP:
 
-            if (message->is_request)
-            {
-                process_sip_request(worker, message);
-            }
-            else
-            {
-                process_sip_response(worker, message);
+                // Process the SIP message here
+                sip_message_t *message = (sip_message_t *)packet;
+                log("Incoming SIP message:\n>>>>>>>>>>>>>>>>>>>>>>>>>\n%s>>>>>>>>>>>>>>>>>>>>>>>>>\n", message->buffer);
+
+                sip_msg_error_t err = parse_message(message);
+                if (err != ERROR_NONE)
+                {
+                    error("Failed to parse SIP message: %d", err);
+                    cleanup_sip_message(message);
+                    break;
+                }
+
+                if (message->is_request)
+                {
+                    process_sip_request(worker, message);
+                }
+                else
+                {
+                    process_sip_response(worker, message);
+                }
+                break;
+            case PACKET_TYPE_DELETE_TRANSACTION:
+                transaction_delete_t *event = (transaction_delete_t *)packet;
+                delete_transaction(worker, event);
+                free(event);
+                break;
+            default:
+                break;
             }
         }
     }

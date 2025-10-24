@@ -5,6 +5,7 @@
 
 #include "sip_server.h"
 #include "network_utils.h"
+#include "timer_manager.h"
 #include "log.h"
 #include "utils.h"
 #include <stdio.h>
@@ -18,7 +19,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define MAX_THREADS 8
+#define MAX_THREADS 7 // TODO make it system cpu - 1
 #define QUEUE_CAPACITY 1024
 #define SIP_PORT 5060
 
@@ -34,6 +35,9 @@ int main()
 
     // Setup server socket
     setup_server_socket(&server_socket, &server_addr);
+
+    // Initialize timer manager
+    timer_one_shot_init();
 
     // Initialize worker threads and their queues
     for (int i = 0; i < MAX_THREADS; i++)
