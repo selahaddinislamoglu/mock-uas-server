@@ -74,6 +74,19 @@ void cleanup_call(sip_call_t *call)
         log("Call is NULL");
         return;
     }
+
+    for (size_t i = 0; i < MAX_DIALOGS_PER_CALL; i++)
+    {
+        if (call->dialog[i] != NULL)
+        {
+            if (call->dialog[i]->state != SIP_DIALOG_STATE_TERMINATED)
+            {
+                set_dialog_state(call->dialog[i], SIP_DIALOG_STATE_TERMINATED);
+            }
+            call->dialog[i]->call = NULL;
+            call->dialog[i] = NULL;
+        }
+    }
     free(call);
 }
 
@@ -616,6 +629,10 @@ void cleanup_transaction(sip_transaction_t *transaction)
         remove_transaction_from_dialog(transaction->dialog, transaction);
     }
     cleanup_sip_message(transaction->message);
+    if (transaction->ack_message)
+    {
+        cleanup_sip_message(transaction->ack_message);
+    }
     free(transaction);
 }
 
