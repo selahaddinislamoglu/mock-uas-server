@@ -92,13 +92,20 @@ int send_sip_error_response_over_transaction(int server_socket, sip_transaction_
         return -1;
     }
 
+    char to_tag[sizeof(PARAM_NAME_TAG) + SIP_TAG_MAX_LENGTH + 8] = {0};
+    if (transaction->dialog != NULL && transaction->dialog->to_tag != NULL && strstr(request->to, transaction->dialog->to_tag) == NULL)
+    {
+        snprintf(to_tag, sizeof(to_tag), ";" PARAM_NAME_TAG "=%.*s", (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag);
+    }
+
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %d %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d %s\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s%s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         status_code, reason,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
+                                        to_tag[0] != '\0' ? to_tag : "",
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
     transaction->final_response_code = status_code;
@@ -129,13 +136,20 @@ int send_100_trying_response_over_transaction(int server_socket, sip_transaction
         return -1;
     }
 
+    char to_tag[sizeof(PARAM_NAME_TAG) + SIP_TAG_MAX_LENGTH + 8] = {0};
+    if (transaction->dialog != NULL && transaction->dialog->to_tag != NULL && strstr(request->to, transaction->dialog->to_tag) == NULL)
+    {
+        snprintf(to_tag, sizeof(to_tag), ";" PARAM_NAME_TAG "=%.*s", (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag);
+    }
+
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_100_TRYING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_100_TRYING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s%s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         RESPONSE_CODE_100,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
+                                        to_tag[0] != '\0' ? to_tag : "",
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
     transaction->final_response_code = RESPONSE_CODE_100;
@@ -165,14 +179,20 @@ int send_180_ring_response_over_transaction(int server_socket, sip_transaction_t
         return -1;
     }
 
+    char to_tag[sizeof(PARAM_NAME_TAG) + SIP_TAG_MAX_LENGTH + 8] = {0};
+    if (transaction->dialog != NULL && transaction->dialog->to_tag != NULL && strstr(request->to, transaction->dialog->to_tag) == NULL)
+    {
+        snprintf(to_tag, sizeof(to_tag), ";" PARAM_NAME_TAG "=%.*s", (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag);
+    }
+
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_180_RINGING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;" PARAM_NAME_TAG "=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_180_RINGING "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s%s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         RESPONSE_CODE_180,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
-                                        (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag,
+                                        to_tag[0] != '\0' ? to_tag : "",
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
     transaction->final_response_code = RESPONSE_CODE_180;
@@ -202,14 +222,20 @@ int send_sip_200_ok_response_over_transaction(int server_socket, sip_transaction
         return -1;
     }
 
+    char to_tag[sizeof(PARAM_NAME_TAG) + SIP_TAG_MAX_LENGTH + 8] = {0};
+    if (transaction->dialog != NULL && transaction->dialog->to_tag != NULL && strstr(request->to, transaction->dialog->to_tag) == NULL)
+    {
+        snprintf(to_tag, sizeof(to_tag), ";" PARAM_NAME_TAG "=%.*s", (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag);
+    }
+
     request->response_length = snprintf(request->response, sizeof(request->response),
-                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_200_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s;" PARAM_NAME_TAG "=%.*s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
+                                        SIP_PROTOCOL_AND_VERSION " %d " RESPONSE_TEXT_200_OK "\r\n" HEADER_NAME_VIA ": %.*s\r\n" HEADER_NAME_FROM ": %.*s\r\n" HEADER_NAME_TO ": %.*s%s\r\n" HEADER_NAME_CALL_ID ": %.*s\r\n" HEADER_NAME_CSEQ ": %.*s\r\n" HEADER_NAME_CONTENT_LENGTH ": 0\r\n"
                                                                  "\r\n",
                                         RESPONSE_CODE_200,
                                         (int)request->via_length, request->via,
                                         (int)request->from_length, request->from,
                                         (int)request->to_length, request->to,
-                                        (int)transaction->dialog->to_tag_length, transaction->dialog->to_tag,
+                                        to_tag[0] != '\0' ? to_tag : "",
                                         (int)request->call_id_length, request->call_id,
                                         (int)request->cseq_length, request->cseq);
     transaction->final_response_code = RESPONSE_CODE_200;
