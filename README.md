@@ -47,7 +47,7 @@ flowchart TD
     29-->30[Associate transaction and dialog]
     30-->31[Create Call]
     31-->32[Set call state INCOMING]
-    32-->33[Associate dialog and transaction]
+    32-->33[Associate dialog and call]
     33-->34[Send 180 Ringing]
     34-->35[Set call state RINGING]
     35-->36[Send 200 OK]
@@ -56,11 +56,10 @@ flowchart TD
     38-->39[Set call state ESTABLISH]
     20-->40{Is INVITE transaction ? Is transaction in COMPLETED state? }
     40-->|YES| 41[ACK for failed INVITE]
-    41-->42[Set transaction state CONFIRMED]
     40-->|NO| 43{Is transaction in IDLE state ? Is dialog in CONFIRMED state?}
     43-->|YES| 44[ACK for success INVITE]
     43-->|NO| 45[Unexpected ACK]
-    42-->46[Set transaction state TERMINATED]
+    41-->46[Set transaction state TERMINATED]
     44-->46
     45-->46
     21-->47{Is dialog in CONFIRMED state}
